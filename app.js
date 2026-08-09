@@ -94,6 +94,17 @@ function nudgeNameField() {
 
   currentEl.textContent = phrases[0];
 
+  // Self-scheduling chain (setTimeout that re-queues itself) instead of
+  // setInterval — this guarantees the next cycle can only ever start
+  // AFTER the previous slide has fully finished and snapped back to
+  // rest. A plain setInterval fires on a fixed clock regardless of
+  // whether the previous 460ms transition actually completed, so under
+  // any tiny delay it could start a new slide mid-transition — that
+  // overlap is exactly what caused the "plays twice" glitch.
+  function scheduleNext() {
+    timer = setTimeout(advance, 2200); // how long each phrase stays fully visible before cycling
+  }
+
   function advance() {
     if (paused) return;
     const nextIdx = (phraseIdx + 1) % phrases.length;
@@ -113,6 +124,7 @@ function nudgeNameField() {
       currentEl.textContent = phrases[nextIdx];
       requestAnimationFrame(() => mask.classList.remove('no-transition'));
       phraseIdx = nextIdx;
+      if (!paused) scheduleNext(); // only queue the next cycle once this one is fully settled
     }, 460); // matches the 0.45s CSS transition + a small buffer
   }
 
@@ -126,7 +138,7 @@ function nudgeNameField() {
     if (nameInput.value.length > 0) return; // never resume once they've typed something real
     paused = false;
     wrap.classList.remove('hidden');
-    timer = setInterval(advance, 2200); // how long each phrase stays fully visible before cycling
+    scheduleNext();
   }
 
   nameInput.addEventListener('focus', stop);
