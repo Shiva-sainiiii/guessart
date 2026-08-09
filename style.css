@@ -150,6 +150,7 @@ input.shake {
 .share-row .btn { flex: 1; }
 
 .btn-primary { background: var(--primary); color: white; }
+.btn-primary.hidden { display: none; }
 .btn-secondary { background: var(--border); color: var(--text); }
 .btn-ghost { background: transparent; color: var(--text-dim); font-weight: 500; }
 .btn-sm { padding: 10px; font-size: 14px; width: auto; padding-left: 20px; padding-right: 20px; }
@@ -162,11 +163,29 @@ input.shake {
   font-size: 13px;
   gap: 10px;
 }
+.divider.hidden { display: none; }
 .divider::before, .divider::after {
   content: '';
   flex: 1;
   height: 1px;
   background: var(--border);
+}
+
+.join-hint {
+  width: 100%;
+  text-align: center;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  margin: -4px 0 2px;
+}
+.join-hint.hidden { display: none; }
+
+/* Room code is prefilled + locked when arriving via a shared link —
+   dim it slightly so it visually reads as "already set", not editable. */
+#input-join-code[readonly] {
+  opacity: 0.75;
+  cursor: default;
 }
 
 input[type="text"] {
@@ -494,15 +513,18 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 /* ===== VOICELINE FAB + radial pie menu ===== */
 .voiceline-fab {
   position: fixed;
-  right: 16px;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  width: 52px;
-  height: 52px;
+  right: 12px;
+  /* Sits just above the chat input row instead of directly over it —
+     chat-input-row is ~54px tall including padding, so lifting the FAB
+     that much clears the send button completely. */
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: none;
   background: var(--primary);
   color: white;
-  font-size: 22px;
+  font-size: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -528,10 +550,10 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 
 .voiceline-menu {
   position: fixed;
-  right: 16px;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  width: 52px;
-  height: 52px;
+  right: 12px;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  width: 46px;
+  height: 46px;
   z-index: 25;
   pointer-events: none; /* re-enabled per-button below once expanded */
 }

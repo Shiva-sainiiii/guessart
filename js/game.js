@@ -89,7 +89,11 @@ const Game = (() => {
   }
 
   function normalizeGuess(text) {
-    return text.trim().toLowerCase().replace(/\s+/g, ' ');
+    // Strip ALL whitespace (not just collapse it) so multi-word answers
+    // like "ice cream" match even if the guesser typed "icecream" or
+    // "rain bow" for "rainbow" — spacing shouldn't be what trips up a
+    // correct guess.
+    return text.trim().toLowerCase().replace(/\s+/g, '');
   }
 
   return {

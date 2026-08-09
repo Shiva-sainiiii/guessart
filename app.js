@@ -139,13 +139,20 @@ function nudgeNameField() {
   tick();
 })();
 
-// If someone opened the app via a shared room link (?room=CODE), prefill
-// the code and nudge them straight to entering their name.
+// If someone opened the app via a shared room link (?room=CODE), skip
+// straight to "join" mode — hide Create Room entirely so a distracted
+// friend can't accidentally start a brand new room instead of joining
+// the one they were invited to. Lock the code field too since it's
+// already correct; nothing to type there.
 (function checkForRoomLinkOnLoad() {
   const params = new URLSearchParams(window.location.search);
   const roomFromLink = params.get('room');
   if (roomFromLink) {
     joinCodeInput.value = roomFromLink.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    joinCodeInput.readOnly = true;
+    createBtn.classList.add('hidden');
+    document.querySelector('.divider').classList.add('hidden');
+    document.getElementById('join-hint').classList.remove('hidden');
     refreshHomeButtonStates();
     nameInput.focus();
   }
