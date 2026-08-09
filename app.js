@@ -75,57 +75,58 @@ function nudgeNameField() {
   nameInput.focus();
 }
 
-// ---------- Animated typing placeholder for the name field ----------
-// Cycles through a few example nicknames, typing and deleting each one,
-// so the field feels alive instead of a static gray "Your name" label.
-// Disappears the instant the person focuses or types anything real.
-(function typingPlaceholder() {
-  const el = document.getElementById('name-placeholder');
+// ---------- Animated placeholder for the name field ----------
+// Cycles through a few example nicknames using a vertical carousel
+// transition: the current phrase slides up and out while the next one
+// slides up into view from below (like an odometer / departure-board
+// flip), instead of a typewriter effect. Disappears the instant the
+// person focuses or types anything real.
+(function slidingPlaceholder() {
+  const wrap = document.getElementById('name-placeholder');
+  const mask = wrap.querySelector('.placeholder-mask');
+  const currentEl = wrap.querySelector('.placeholder-current');
+  const nextEl = wrap.querySelector('.placeholder-next');
   const phrases = ['Enter Nickname', 'e.g. Rahul', 'e.g. Priya', 'e.g. Sketchy_99'];
-  let phraseIdx = 0, charIdx = 0, deleting = false;
+
+  let phraseIdx = 0;
   let timer = null;
   let paused = false;
 
-  function tick() {
+  currentEl.textContent = phrases[0];
+
+  function advance() {
     if (paused) return;
-    const current = phrases[phraseIdx];
+    const nextIdx = (phraseIdx + 1) % phrases.length;
+    nextEl.textContent = phrases[nextIdx];
 
-    if (!deleting) {
-      charIdx++;
-      if (charIdx > current.length) {
-        deleting = true;
-        timer = setTimeout(tick, 1400); // pause on full phrase before deleting
-        renderText(current);
-        return;
-      }
-    } else {
-      charIdx--;
-      if (charIdx < 0) {
-        deleting = false;
-        phraseIdx = (phraseIdx + 1) % phrases.length;
-        charIdx = 0;
-      }
-    }
+    mask.classList.add('cycling');
 
-    renderText(current.slice(0, charIdx));
-    timer = setTimeout(tick, deleting ? 35 : 70);
-  }
-
-  function renderText(text) {
-    el.innerHTML = `${text}<span class="cursor"></span>`;
+    // After the slide transition finishes, snap both spans back to
+    // their resting positions with no animation, so the "next" phrase
+    // (now showing) becomes the new "current" for the following cycle.
+    // no-transition goes on in the SAME tick as removing .cycling, so
+    // the snap-back to resting position never itself animates (which
+    // would otherwise cause a visible flicker/reverse-slide).
+    setTimeout(() => {
+      mask.classList.add('no-transition');
+      mask.classList.remove('cycling');
+      currentEl.textContent = phrases[nextIdx];
+      requestAnimationFrame(() => mask.classList.remove('no-transition'));
+      phraseIdx = nextIdx;
+    }, 460); // matches the 0.45s CSS transition + a small buffer
   }
 
   function stop() {
     paused = true;
     clearTimeout(timer);
-    el.classList.add('hidden');
+    wrap.classList.add('hidden');
   }
 
   function start() {
     if (nameInput.value.length > 0) return; // never resume once they've typed something real
     paused = false;
-    el.classList.remove('hidden');
-    tick();
+    wrap.classList.remove('hidden');
+    timer = setInterval(advance, 2200); // how long each phrase stays fully visible before cycling
   }
 
   nameInput.addEventListener('focus', stop);
@@ -136,7 +137,7 @@ function nudgeNameField() {
     if (nameInput.value.length === 0) start();
   });
 
-  tick();
+  start();
 })();
 
 // If someone opened the app via a shared room link (?room=CODE), skip

@@ -18,7 +18,12 @@
     <div class="card">
       <div class="input-wrap">
         <input id="input-name" type="text" maxlength="14" autocomplete="off">
-        <span id="name-placeholder" class="typing-placeholder"></span>
+        <span id="name-placeholder" class="typing-placeholder">
+          <span class="placeholder-mask">
+            <span class="placeholder-slide placeholder-current"></span>
+            <span class="placeholder-slide placeholder-next"></span>
+          </span>
+        </span>
       </div>
 
       <button id="btn-create" class="btn btn-primary" disabled>Create Room</button>

@@ -116,16 +116,47 @@ body {
   letter-spacing: 2px;
   text-transform: none;
   z-index: 0;
+  overflow: hidden; /* clips the vertical slide so text never spills outside the input */
 }
-.typing-placeholder .cursor {
-  display: inline-block;
-  width: 2px;
-  height: 20px;
-  background: var(--text-dim);
-  margin-left: 3px;
-  animation: caretBlink 0.9s step-end infinite;
+
+/* Fixed-height viewport the two sliding phrases move through — like a
+   vertical carousel / odometer, one phrase scrolls up and out while
+   the next scrolls up and in from below. */
+.placeholder-mask {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  overflow: hidden;
 }
-@keyframes caretBlink { 50% { opacity: 0; } }
+.placeholder-slide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.45s ease;
+}
+/* Default resting spot: the "current" phrase sits visible in the
+   window, the "next" phrase waits just below it, out of view. */
+.placeholder-current { transform: translateY(0); opacity: 1; }
+.placeholder-next { transform: translateY(100%); opacity: 0; }
+
+/* .cycling triggers the swap: current flies up and out, next flies up
+   into the vacated spot — both moving the same direction, so it reads
+   as one continuous upward scroll rather than a cross-fade. */
+.placeholder-mask.cycling .placeholder-current {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+.placeholder-mask.cycling .placeholder-next {
+  transform: translateY(0);
+  opacity: 1;
+}
+.placeholder-mask.no-transition .placeholder-slide {
+  transition: none !important;
+}
 
 /* Gentle shake when someone taps a disabled action — replaces the old
    static red warning text with an in-the-moment nudge instead. */
