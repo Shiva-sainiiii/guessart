@@ -204,10 +204,15 @@ input[type="text"] {
 input[type="text"]:focus { outline: 2px solid var(--primary); }
 
 /* Name field keeps whatever case the person actually typed — only the
-   room-code field should force uppercase. */
+   room-code field should force uppercase. Background must stay
+   transparent so the animated typing placeholder underneath it (an
+   absolutely-positioned sibling span) is actually visible — the shared
+   input[type="text"] rule above gives every text input an opaque
+   background, which otherwise completely hides the placeholder span. */
 #input-name {
   text-transform: none;
   letter-spacing: 0.5px;
+  background: transparent;
 }
 
 .status-msg {
@@ -543,31 +548,58 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 .voiceline-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.5);
   z-index: 20;
 }
 .voiceline-backdrop.hidden { display: none; }
 
+/* Free-Fire-style emote wheel: the ring is pinned to the exact center
+   of the viewport (not to the FAB), so at any screen size every button
+   has equal room in all directions and nothing can ever clip off an
+   edge. A small center hub icon anchors it visually, like the
+   character portrait in the middle of a game's radial wheel. */
 .voiceline-menu {
   position: fixed;
-  right: 12px;
-  bottom: calc(70px + env(safe-area-inset-bottom));
-  width: 46px;
-  height: 46px;
+  left: 50%;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  margin-top: -32px;
   z-index: 25;
   pointer-events: none; /* re-enabled per-button below once expanded */
 }
 .voiceline-menu.hidden { display: none; }
 .voiceline-menu.expanded { pointer-events: auto; }
 
-/* Each button starts stacked at the FAB's position (translate 0,0) and
-   flies out to its --tx/--ty offset (set inline via JS) once .expanded
-   is added — a simple radial "pie" fan-out above the FAB. */
+.voiceline-menu::before {
+  content: '🎤';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 24px rgba(124,92,255,0.5);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+.voiceline-menu.expanded::before { opacity: 1; transform: scale(1); }
+
+/* Each button starts stacked at the wheel's center hub and flies out
+   to its --tx/--ty offset (set inline via JS, evenly spaced in a full
+   circle) once .expanded is added. */
 .voiceline-btn {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 84px;
+  left: 50%;
+  top: 50%;
+  width: 78px;
+  margin-left: -39px;
+  margin-top: -22px;
   padding: 10px 6px;
   border-radius: 20px;
   border: 1px solid var(--border);
@@ -579,14 +611,14 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   white-space: nowrap;
   cursor: pointer;
   opacity: 0;
-  transform: translate(0, 0) scale(0.5);
-  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+  transform: translate(0, 0) scale(0.4);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
 }
 .voiceline-menu.expanded .voiceline-btn {
   opacity: 1;
   transform: translate(var(--tx), var(--ty)) scale(1);
 }
-.voiceline-btn:active { transform: translate(var(--tx), var(--ty)) scale(0.9); }
+.voiceline-btn:active { transform: translate(var(--tx), var(--ty)) scale(0.88); }
 
 /* ===== CHAT — Instagram-style bubbles ===== */
 .chat-panel {

@@ -521,22 +521,25 @@ function setupToolbar() {
   });
 }
 
-// ---------- VOICELINE FAB (radial pie menu) ----------
+// ---------- VOICELINE FAB (full radial ring, opens centered like a
+// Free-Fire style emote wheel — never anchored to the FAB itself, so
+// it can never get clipped by a screen edge no matter where the FAB
+// sits or how small the phone is) ----------
 function setupVoicelineMenu() {
   const fab = document.getElementById('btn-voiceline-fab');
   const menu = document.getElementById('voiceline-menu');
   const backdrop = document.getElementById('voiceline-backdrop');
   const items = AudioFX.VOICELINES;
 
-  // Build the radial buttons once, positioned in an arc above the FAB.
+  // Build the ring buttons once, evenly spaced in a full 360° circle
+  // around the menu's own center (which CSS pins to the middle of the
+  // screen) — same idea as a game's radial emote wheel.
   menu.innerHTML = '';
   const count = items.length;
-  const arcSpan = 140; // degrees the buttons fan out across
-  const startAngle = -90 - arcSpan / 2; // centered above the FAB, pointing up
-  const radius = 92;
+  const radius = 108;
 
   items.forEach((v, i) => {
-    const angleDeg = startAngle + (arcSpan / Math.max(1, count - 1)) * i;
+    const angleDeg = (360 / count) * i - 90; // start at the top, go clockwise
     const angleRad = (angleDeg * Math.PI) / 180;
     const x = Math.cos(angleRad) * radius;
     const y = Math.sin(angleRad) * radius;
