@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Sketch Duel</title>
+<title>GuessArt</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <!-- SCREEN 1: HOME / LOBBY -->
   <div id="screen-home" class="screen active">
     <div class="brand">
-      <h1>Sketch<span>Duel</span></h1>
+      <h1>Guess<span>Art</span></h1>
       <p class="tagline">draw. guess. roast your friend.</p>
     </div>
 
@@ -20,8 +20,7 @@
         <input id="input-name" type="text" maxlength="14" autocomplete="off">
         <span id="name-placeholder" class="typing-placeholder">
           <span class="placeholder-mask">
-            <span class="placeholder-slide placeholder-current"></span>
-            <span class="placeholder-slide placeholder-next"></span>
+            <span class="placeholder-slide" id="placeholder-text"></span>
           </span>
         </span>
       </div>
@@ -34,6 +33,8 @@
     </div>
 
     <p id="status-msg" class="status-msg"></p>
+
+    <p class="credit-line">GuessArt <span>by Shiva Saini</span></p>
   </div>
 
   <!-- SCREEN 2: WAITING ROOM -->

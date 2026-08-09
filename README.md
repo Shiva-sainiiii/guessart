@@ -1,7 +1,9 @@
-# Sketch Duel
+# GuessArt
 
 Mobile-first real-time drawing/guessing game for long-distance friends.
 Peer-to-peer via WebRTC (PeerJS) — no backend, no database.
+
+_Formerly known as Sketch Duel — renamed to GuessArt._
 
 ## Phase 2.3: Rotating text clues + polished home screen + meme voicelines
 

@@ -119,9 +119,11 @@ body {
   overflow: hidden; /* clips the vertical slide so text never spills outside the input */
 }
 
-/* Fixed-height viewport the two sliding phrases move through — like a
-   vertical carousel / odometer, one phrase scrolls up and out while
-   the next scrolls up and in from below. */
+/* Fixed-height viewport a single phrase slides through — like a
+   vertical carousel / odometer. Using ONE element (not two) that gets
+   its text swapped instantly while off-screen avoids any two-element
+   sync edge case, which is what caused the occasional "plays twice"
+   flicker in an earlier version. */
 .placeholder-mask {
   position: relative;
   width: 100%;
@@ -136,26 +138,22 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.45s ease;
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s ease;
 }
-/* Default resting spot: the "current" phrase sits visible in the
-   window, the "next" phrase waits just below it, out of view. */
-.placeholder-current { transform: translateY(0); opacity: 1; }
-.placeholder-next { transform: translateY(100%); opacity: 0; }
-
-/* .cycling triggers the swap: current flies up and out, next flies up
-   into the vacated spot — both moving the same direction, so it reads
-   as one continuous upward scroll rather than a cross-fade. */
-.placeholder-mask.cycling .placeholder-current {
+/* Slides fully out the top and fades, then (with transitions
+   suspended) jumps to just below the window with new text, then
+   transitions back to resting position — one continuous-feeling
+   upward scroll per cycle, driven by a single element. */
+.placeholder-mask.out .placeholder-slide {
   transform: translateY(-100%);
   opacity: 0;
 }
-.placeholder-mask.cycling .placeholder-next {
-  transform: translateY(0);
-  opacity: 1;
-}
-.placeholder-mask.no-transition .placeholder-slide {
+.placeholder-mask.jump .placeholder-slide {
   transition: none !important;
+  transform: translateY(100%);
+  opacity: 0;
 }
 
 /* Gentle shake when someone taps a disabled action — replaces the old
@@ -252,6 +250,18 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   font-size: 14px;
   text-align: center;
   min-height: 18px;
+}
+
+.credit-line {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+.credit-line span {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .label { color: var(--text-dim); font-size: 13px; }

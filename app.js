@@ -77,65 +77,66 @@ function nudgeNameField() {
 
 // ---------- Animated placeholder for the name field ----------
 // Cycles through a few example nicknames using a vertical carousel
-// transition: the current phrase slides up and out while the next one
-// slides up into view from below (like an odometer / departure-board
-// flip), instead of a typewriter effect. Disappears the instant the
-// person focuses or types anything real.
+// transition: the current phrase slides up and out, then (instantly,
+// with transitions suspended) the text is swapped and jumped to just
+// below the window, then slides back up into view — one continuous
+// upward scroll per cycle. Uses a SINGLE span with its text swapped
+// while off-screen, not two synced spans — that two-element design is
+// what caused the "plays twice" glitch, since both spans could end up
+// visible/animating at once if their timers ever drifted apart.
+// Disappears the instant the person focuses or types anything real.
 (function slidingPlaceholder() {
   const wrap = document.getElementById('name-placeholder');
   const mask = wrap.querySelector('.placeholder-mask');
-  const currentEl = wrap.querySelector('.placeholder-current');
-  const nextEl = wrap.querySelector('.placeholder-next');
+  const textEl = document.getElementById('placeholder-text');
   const phrases = ['Enter Nickname', 'e.g. Rahul', 'e.g. Priya', 'e.g. Sketchy_99'];
 
   let phraseIdx = 0;
   let timer = null;
   let paused = false;
 
-  currentEl.textContent = phrases[0];
+  textEl.textContent = phrases[0];
 
   // Self-scheduling chain (setTimeout that re-queues itself) instead of
-  // setInterval — this guarantees the next cycle can only ever start
-  // AFTER the previous slide has fully finished and snapped back to
-  // rest. A plain setInterval fires on a fixed clock regardless of
-  // whether the previous 460ms transition actually completed, so under
-  // any tiny delay it could start a new slide mid-transition — that
-  // overlap is exactly what caused the "plays twice" glitch.
+  // setInterval — guarantees the next cycle can only start AFTER the
+  // previous one has fully finished, so cycles can never overlap.
   function scheduleNext() {
     timer = setTimeout(advance, 2200); // how long each phrase stays fully visible before cycling
   }
 
   function advance() {
     if (paused) return;
-    const nextIdx = (phraseIdx + 1) % phrases.length;
-    nextEl.textContent = phrases[nextIdx];
 
-    mask.classList.add('cycling');
+    // Step 1: slide the current phrase up and out.
+    mask.classList.add('out');
 
-    // After the slide transition finishes, snap both spans back to
-    // their resting positions with no animation, so the "next" phrase
-    // (now showing) becomes the new "current" for the following cycle.
-    // no-transition goes on in the SAME tick as removing .cycling, so
-    // the snap-back to resting position never itself animates (which
-    // would otherwise cause a visible flicker/reverse-slide).
     setTimeout(() => {
-      mask.classList.add('no-transition');
-      mask.classList.remove('cycling');
-      currentEl.textContent = phrases[nextIdx];
-      requestAnimationFrame(() => mask.classList.remove('no-transition'));
-      phraseIdx = nextIdx;
-      if (!paused) scheduleNext(); // only queue the next cycle once this one is fully settled
-    }, 460); // matches the 0.45s CSS transition + a small buffer
+      // Step 2: with transitions suspended, swap the text and jump the
+      // (now invisible) span to just below the window.
+      mask.classList.remove('out');
+      mask.classList.add('jump');
+      phraseIdx = (phraseIdx + 1) % phrases.length;
+      textEl.textContent = phrases[phraseIdx];
+
+      // Step 3: next frame, re-enable transitions and let it slide back
+      // up into the resting/visible position.
+      requestAnimationFrame(() => {
+        mask.classList.remove('jump');
+        if (!paused) scheduleNext(); // only queue the next cycle once this one is fully settled
+      });
+    }, 400); // matches the 0.4s CSS transition for the "out" phase
   }
 
   function stop() {
     paused = true;
     clearTimeout(timer);
+    timer = null;
     wrap.classList.add('hidden');
   }
 
   function start() {
     if (nameInput.value.length > 0) return; // never resume once they've typed something real
+    if (timer) return; // a cycle is already scheduled — don't stack a second chain
     paused = false;
     wrap.classList.remove('hidden');
     scheduleNext();
@@ -231,12 +232,12 @@ document.getElementById('btn-copy-code').addEventListener('click', async () => {
 document.getElementById('btn-share-link').addEventListener('click', async () => {
   const code = document.getElementById('room-code-display').textContent;
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
-  const shareText = `Join my Sketch Duel game! Room code: ${code}`;
+  const shareText = `Join my GuessArt game! Room code: ${code}`;
 
   if (navigator.share) {
     // Native share sheet — lets them pick WhatsApp, Messages, etc. directly.
     try {
-      await navigator.share({ title: 'Sketch Duel', text: shareText, url: shareUrl });
+      await navigator.share({ title: 'GuessArt', text: shareText, url: shareUrl });
     } catch (e) {
       // User cancelled the share sheet — not an error, do nothing.
     }
