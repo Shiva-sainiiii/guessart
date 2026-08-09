@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Sketch Duel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- SCREEN 1: HOME / LOBBY -->
+  <div id="screen-home" class="screen active">
+    <div class="brand">
+      <h1>Sketch<span>Duel</span></h1>
+      <p class="tagline">draw. guess. roast your friend.</p>
+    </div>
+
+    <div class="card">
+      <div class="input-wrap">
+        <input id="input-name" type="text" maxlength="14" autocomplete="off">
+        <span id="name-placeholder" class="typing-placeholder"></span>
+      </div>
+
+      <button id="btn-create" class="btn btn-primary" disabled>Create Room</button>
+      <div class="divider"><span>or</span></div>
+      <input id="input-join-code" type="text" placeholder="ROOM CODE" maxlength="6" autocomplete="off" autocapitalize="characters">
+      <button id="btn-join" class="btn btn-secondary" disabled>Join Room</button>
+    </div>
+
+    <p id="status-msg" class="status-msg"></p>
+  </div>
+
+  <!-- SCREEN 2: WAITING ROOM -->
+  <div id="screen-waiting" class="screen">
+    <div class="card">
+      <p class="label">Share this code with your friend</p>
+      <div class="room-code" id="room-code-display">------</div>
+      <div class="share-row">
+        <button id="btn-copy-code" class="btn btn-secondary btn-sm">Copy Code</button>
+        <button id="btn-share-link" class="btn btn-primary btn-sm">Share Link</button>
+      </div>
+      <div class="waiting-indicator">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <p class="waiting-text" id="waiting-text">Waiting for friend to join...</p>
+      <button id="btn-cancel-waiting" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: GAME -->
+  <div id="screen-game" class="screen screen-game">
+
+    <!-- Top bar: round info, timer, scores -->
+    <div class="game-topbar">
+      <div class="round-info">
+        <span id="round-label">Round 1/8</span>
+      </div>
+      <div class="timer" id="timer-display">70</div>
+      <div class="scores">
+        <span id="my-score-label">You: 0</span>
+        <span id="friend-score-label">Friend: 0</span>
+      </div>
+    </div>
+
+    <!-- Word banner: shown to drawer only, or "Guess the drawing!" to guesser -->
+    <div id="word-banner" class="word-banner"></div>
+
+    <!-- Hint tiles: guesser-only blank/reveal row, first+last letters shown instantly -->
+    <div id="hint-wrap" class="hint-wrap hidden">
+      <div id="hint-tiles" class="hint-tiles"></div>
+    </div>
+
+    <!-- Clue line: guesser-only rotating text hint, cycles every ~12s -->
+    <p id="clue-line" class="clue-line hidden"></p>
+
+    <!-- Canvas area -->
+    <div class="canvas-wrap">
+      <canvas id="draw-canvas"></canvas>
+      <div id="canvas-overlay" class="canvas-overlay hidden">
+        <p id="overlay-text"></p>
+      </div>
+    </div>
+
+    <!-- Drawing tools: only visible/active for drawer -->
+    <div class="toolbar" id="toolbar">
+      <div class="color-swatches" id="color-swatches"></div>
+      <div class="width-control">
+        <button class="btn-icon" id="btn-width-small" title="Thin">●</button>
+        <button class="btn-icon" id="btn-width-medium" title="Medium">⬤</button>
+        <button class="btn-icon" id="btn-width-large" title="Thick">⚫</button>
+      </div>
+      <button class="btn-icon" id="btn-eraser" title="Eraser">🧹</button>
+      <button class="btn-icon" id="btn-undo" title="Undo last stroke">↩️</button>
+      <button class="btn-icon" id="btn-clear-canvas" title="Clear canvas">🗑️</button>
+    </div>
+
+    <!-- Chat + guess -->
+    <div class="chat-panel">
+      <div class="chat-log" id="chat-log"></div>
+      <div class="chat-input-row">
+        <button id="btn-emoji-toggle" class="btn-icon">😀</button>
+        <input id="chat-input" type="text" placeholder="Type a guess or chat..." maxlength="60" autocomplete="off">
+        <button id="btn-send-chat" class="btn-icon btn-send">➤</button>
+      </div>
+      <div id="emoji-picker" class="emoji-picker hidden"></div>
+    </div>
+
+    <!-- Voiceline FAB: tap to open a radial menu of 5 meme sound buttons -->
+    <button id="btn-voiceline-fab" class="voiceline-fab" title="Meme voicelines">🎤</button>
+    <div id="voiceline-menu" class="voiceline-menu hidden"></div>
+    <div id="voiceline-backdrop" class="voiceline-backdrop hidden"></div>
+  </div>
+
+  <!-- SCREEN 4: ROUND RESULT (brief overlay between turns) -->
+  <div id="screen-round-result" class="screen">
+    <div class="card">
+      <h2 id="result-title">Round Over!</h2>
+      <p id="result-word" class="result-word"></p>
+      <div class="scores-final">
+        <div><span id="rr-my-score">0</span><small id="rr-my-label">You</small></div>
+        <div><span id="rr-friend-score">0</span><small id="rr-friend-label">Friend</small></div>
+      </div>
+      <p class="waiting-text" id="next-round-text">Next round starting...</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: GAME OVER -->
+  <div id="screen-game-over" class="screen">
+    <div class="card">
+      <h2 id="game-over-title">🏆 Game Over!</h2>
+      <div class="scores-final">
+        <div><span id="final-my-score">0</span><small id="final-my-label">You</small></div>
+        <div><span id="final-friend-score">0</span><small id="final-friend-label">Friend</small></div>
+      </div>
+      <button id="btn-play-again" class="btn btn-primary">Back to Home</button>
+    </div>
+  </div>
+
+  <!-- PeerJS library -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="js/words.js"></script>
+  <script src="js/connection.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/hints.js"></script>
+  <script src="js/clues.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
