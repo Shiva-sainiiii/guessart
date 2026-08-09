@@ -111,15 +111,27 @@ function nudgeNameField() {
     mask.classList.add('out');
 
     setTimeout(() => {
-      // Step 2: with transitions suspended, swap the text and jump the
-      // (now invisible) span to just below the window.
-      mask.classList.remove('out');
+      // Step 2: apply .jump FIRST (transition: none) in the same tick,
+      // THEN remove .out — this ordering matters. If .out were removed
+      // before .jump's transition:none takes hold, there's a brief
+      // window where the element's default transition is active and
+      // the browser can paint one frame of it animating back toward
+      // translateY(0) BEFORE jumping to translateY(100%) — a visible
+      // flash in the wrong (downward-then-down-again) direction, which
+      // is what caused the "animates both ways" glitch. Applying .jump
+      // first guarantees transitions are already suspended before .out
+      // is lifted, so the position change from -100% to +100% is a
+      // silent, un-animated teleport every time.
       mask.classList.add('jump');
+      mask.classList.remove('out');
       phraseIdx = (phraseIdx + 1) % phrases.length;
       textEl.textContent = phrases[phraseIdx];
 
       // Step 3: next frame, re-enable transitions and let it slide back
-      // up into the resting/visible position.
+      // up into the resting/visible position — this is the ONLY
+      // animated movement in the swap, so the whole cycle reads as one
+      // continuous upward scroll (out the top, silent reset below,
+      // back up into place) instead of any back-and-forth.
       requestAnimationFrame(() => {
         mask.classList.remove('jump');
         if (!paused) scheduleNext(); // only queue the next cycle once this one is fully settled

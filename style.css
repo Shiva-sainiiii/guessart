@@ -118,6 +118,11 @@ body {
   z-index: 0;
   overflow: hidden; /* clips the vertical slide so text never spills outside the input */
 }
+/* Without this rule, JS's wrap.classList.add('hidden') on focus/typing
+   had no matching CSS and did nothing — the placeholder stayed visible
+   and overlapped whatever the person typed, which is what caused the
+   "Enter Nickname" / "Shiva" double-text glitch. */
+.typing-placeholder.hidden { display: none; }
 
 /* Fixed-height viewport a single phrase slides through — like a
    vertical carousel / odometer. Using ONE element (not two) that gets
@@ -253,15 +258,12 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 }
 
 .credit-line {
-  margin-top: 24px;
+  margin-top: 2px;
   text-align: center;
   font-size: 12px;
   color: var(--text-dim);
   letter-spacing: 0.5px;
-}
-.credit-line span {
-  color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .label { color: var(--text-dim); font-size: 13px; }
