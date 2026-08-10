@@ -78,8 +78,22 @@ const DrawCanvas = (() => {
     // Already filled with this exact color — nothing to do.
     if (startR === fr && startG === fg && startB === fb && startA === fa) return;
 
+    // Tolerance-based match instead of exact equality. A hand-drawn
+    // stroke boundary is anti-aliased — its edge pixels are partially
+    // blended between the line color and the background, not a hard
+    // line — so exact-match flood fill either leaks straight through
+    // those semi-transparent edge pixels or (on a fresh transparent
+    // canvas) refuses to spread at all once it hits the first
+    // slightly-different pixel. A small per-channel tolerance treats
+    // those near-identical edge pixels as "still background" so fills
+    // stop at the visible boundary instead of leaking past it or
+    // stalling immediately.
+    const TOLERANCE = 32;
     const matches = (idx) =>
-      data[idx] === startR && data[idx + 1] === startG && data[idx + 2] === startB && data[idx + 3] === startA;
+      Math.abs(data[idx] - startR) <= TOLERANCE &&
+      Math.abs(data[idx + 1] - startG) <= TOLERANCE &&
+      Math.abs(data[idx + 2] - startB) <= TOLERANCE &&
+      Math.abs(data[idx + 3] - startA) <= TOLERANCE;
 
     // Iterative stack-based fill (recursion would blow the call stack on
     // large canvases). Scanline variant keeps this fast enough for a

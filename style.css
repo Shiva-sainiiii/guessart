@@ -376,8 +376,15 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   margin: 8px 0;
 }
 
-/* ===== GAME SCREEN ===== */
+/* ===== GAME SCREEN =====
+   Three stacked panels, each a fixed % of the total screen height:
+     20% top    — .game-panel-top    (topbar, voice strip, word/hints/clue)
+     40% mid    — .game-panel-mid    (canvas + drawing toolbar)
+     40% bottom — .game-panel-bottom (chat + its input row)
+   The reconnect banner floats above this and doesn't take a height
+   share of its own. */
 .screen-game {
+  position: relative;
   max-width: 100%;
   width: 100%;
   height: 100vh;
@@ -386,6 +393,34 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   justify-content: flex-start;
   gap: 6px;
   overflow: hidden; /* keyboard opening must never push the whole layout around */
+}
+
+.game-panel-top,
+.game-panel-mid,
+.game-panel-bottom {
+  width: 100%;
+  min-height: 0; /* required for children to shrink/scroll instead of overflowing */
+  display: flex;
+  flex-direction: column;
+}
+
+.game-panel-top {
+  height: 20%;
+  flex: 0 0 20%;
+  gap: 2px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-panel-mid {
+  height: 40%;
+  flex: 0 0 40%;
+  gap: 6px;
+}
+
+.game-panel-bottom {
+  height: 40%;
+  flex: 0 0 40%;
 }
 
 /* Topbar: two player identity chips (left = me, right = friend) flank a
@@ -487,7 +522,11 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 /* Reconnect banner — sits above the topbar, doesn't block the canvas
    or chat so play can continue locally while the link comes back. */
 .reconnect-banner {
-  width: 100%;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -499,7 +538,6 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   color: var(--accent);
   font-size: 13px;
   font-weight: 600;
-  flex-shrink: 0;
 }
 .reconnect-banner.hidden { display: none; }
 .reconnect-spinner {
@@ -613,21 +651,20 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Canvas gets a fixed share of the screen height instead of flex:1 —
-   this means the on-screen keyboard opening (which shrinks the visual
-   viewport) resizes the CHAT area, never the canvas. The canvas stays
-   put and never re-triggers its own resize/clear logic just because
-   the person started typing. */
+/* Canvas fills the rest of .game-panel-mid (which is a fixed 40% of
+   the screen) after the toolbar takes its own space below — so the
+   canvas's on-screen size is pinned to that 40% panel and never
+   changes when the keyboard opens (only the chat panel below is
+   affected by that). */
 .canvas-wrap {
   position: relative;
   width: 100%;
-  height: 42vh;
-  min-height: 200px;
+  flex: 1;
+  min-height: 0;
   background: #ffffff;
   border-radius: 12px;
   overflow: hidden;
   touch-action: none;
-  flex-shrink: 0;
 }
 #draw-canvas {
   width: 100%;
@@ -805,6 +842,7 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 /* ===== CHAT — Instagram-style bubbles ===== */
 .chat-panel {
   width: 100%;
+  height: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
