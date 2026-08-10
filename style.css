@@ -257,13 +257,25 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   min-height: 18px;
 }
 
+/* Developer credit — styled as a bold, glowing companion line to the
+   GuessArt heading rather than a plain gray footnote. Nudged right of
+   center (not pinned hard to the edge) so it reads like a signature
+   tucked near the logo, the way a studio credit sits on a title
+   screen — visible and confident, without fully abandoning the
+   centered layout the rest of .brand uses. */
 .credit-line {
-  margin-top: 2px;
-  text-align: center;
-  font-size: 12px;
+  margin-top: 6px;
+  margin-left: 38%;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--text-dim);
-  letter-spacing: 0.5px;
-  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.credit-line span {
+  color: var(--primary);
+  font-weight: 800;
+  text-shadow: 0 0 16px rgba(124,92,255,0.45);
 }
 
 .label { color: var(--text-dim); font-size: 13px; }
@@ -405,6 +417,114 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 @keyframes pulse-text { 50% { opacity: 0.5; } }
 
 .scores { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-dim); text-align: right; }
+.score-chip { display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
+
+/* Presence dot — green pulse when the peer's WebRTC connection is
+   live, gray/static once it drops (see ConnectionMonitor in app.js).
+   The pulse ring on "online" is subtle enough not to be distracting
+   during normal play but still reads as "actively connected" rather
+   than a flat status icon. */
+.presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-dim);
+}
+.presence-dot.online {
+  background: #2ecc71;
+  box-shadow: 0 0 0 0 rgba(46,204,113,0.6);
+  animation: presencePulse 2s infinite;
+}
+.presence-dot.offline {
+  background: var(--accent);
+  animation: none;
+}
+@keyframes presencePulse {
+  0% { box-shadow: 0 0 0 0 rgba(46,204,113,0.5); }
+  70% { box-shadow: 0 0 0 5px rgba(46,204,113,0); }
+  100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); }
+}
+
+/* Reconnect banner — sits above the topbar, doesn't block the canvas
+   or chat so play can continue locally while the link comes back. */
+.reconnect-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255,92,138,0.15);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.reconnect-banner.hidden { display: none; }
+.reconnect-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,92,138,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Voice call bar — sits right under the topbar. Idle state is a plain
+   outlined pill; "connecting" pulses; "in call" turns solid green with
+   a live waveform-style pulse so it's obvious at a glance the mic is
+   hot, the way a phone app shows an active call. */
+.call-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.call-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.call-btn.connecting {
+  border-color: var(--primary);
+  color: var(--primary);
+  animation: callPulse 1s infinite;
+}
+.call-btn.active {
+  border-color: #2ecc71;
+  background: rgba(46,204,113,0.12);
+  color: #2ecc71;
+}
+@keyframes callPulse { 50% { opacity: 0.6; } }
+
+.call-mute-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.call-mute-btn.muted { border-color: var(--accent); color: var(--accent); }
+.call-mute-btn.hidden { display: none; }
 
 .word-banner {
   width: 100%;

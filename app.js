@@ -14,6 +14,11 @@
 //   { type: 'correct_guess', word }                  — drawer confirms a guess was correct
 //   { type: 'timeout' }                              — drawer's timer ran out with no correct guess
 //   { type: 'next_turn' }                             — signal to advance after result screen
+//   { type: 'sync_state', round, totalRounds, myScoreFromSender, friendScoreFromSender, isMyTurnFromSender, timeLeft, wordLengthPattern } — sent by the HOST right after a reconnect so the guest's client can catch up to the current round/score/timer instead of restarting
+//   { type: 'call-offer', sdp }                       — voice call: caller's WebRTC offer
+//   { type: 'call-answer', sdp }                      — voice call: callee's WebRTC answer
+//   { type: 'call-ice', candidate }                   — voice call: ICE candidate exchange
+//   { type: 'call-end' }                               — voice call: either side hung up
 
 const screens = {
   home: document.getElementById('screen-home'),
@@ -328,6 +333,27 @@ function handleMessage(data) {
       // drawerIsMe is from the HOST's (sender's) perspective; flip for us.
       advanceTurn(!data.drawerIsMe);
       break;
+    case 'sync_state':
+      // Sent by the host right after a reconnect. We deliberately only
+      // patch what's SAFE to overwrite from the outside — the visible
+      // score/round/timer labels — rather than force-resetting Game's
+      // internal turn state, which could desync whose-turn-is-it if this
+      // arrives at an awkward moment mid-transition. Worst case after a
+      // reconnect: the numbers on screen catch up instantly, and normal
+      // turn messages (which keep flowing regardless) keep everything
+      // else correct going forward.
+      // myScoreFromSender/friendScoreFromSender are from the HOST's
+      // perspective, so on a guest client they're swapped relative to
+      // "my" and "friend" here.
+      document.getElementById('round-label').textContent = `Round ${data.round}/${data.totalRounds}`;
+      document.querySelector('#my-score-label .score-text').textContent =
+        `${myName}: ${amHost ? data.myScoreFromSender : data.friendScoreFromSender}`;
+      document.querySelector('#friend-score-label .score-text').textContent =
+        `${friendName}: ${amHost ? data.friendScoreFromSender : data.myScoreFromSender}`;
+      if (typeof data.timeLeft === 'number') {
+        document.getElementById('timer-display').textContent = Math.max(0, data.timeLeft);
+      }
+      break;
   }
 }
 
@@ -351,6 +377,8 @@ function startGameSession() {
   setupToolbar();
   setupChat();
   setupVoicelineMenu();
+  setupReconnectHandling();
+  setupVoiceCall();
 
   Game.beginGame(amHost);
   updateScoreLabels();
@@ -362,6 +390,61 @@ function startGameSession() {
       beginTurnLocal(true, null);
     }, 400);
   }
+}
+
+// ---------- RECONNECT HANDLING ----------
+// Wires the presence dots + "Reconnecting..." banner to Connection's
+// lifecycle events. Registered once per game session (not per-message),
+// since Connection's onClose/onReconnecting/etc. handler lists just
+// keep growing otherwise across multiple games in one page load.
+let reconnectHandlersRegistered = false;
+function setupReconnectHandling() {
+  if (reconnectHandlersRegistered) return;
+  reconnectHandlersRegistered = true;
+
+  const banner = document.getElementById('reconnect-banner');
+  const bannerText = document.getElementById('reconnect-text');
+  const friendDot = document.getElementById('friend-presence-dot');
+
+  Connection.onClose(() => {
+    friendDot.classList.remove('online');
+    friendDot.classList.add('offline');
+    banner.classList.remove('hidden');
+    bannerText.textContent = 'Connection lost — reconnecting...';
+    addSystemChatMessage(`⚠️ ${friendName} disconnected. Trying to reconnect...`);
+  });
+
+  Connection.onReconnecting((attempt, max) => {
+    bannerText.textContent = `Reconnecting... (${attempt}/${max})`;
+  });
+
+  Connection.onReconnected(() => {
+    friendDot.classList.remove('offline');
+    friendDot.classList.add('online');
+    banner.classList.add('hidden');
+    addSystemChatMessage(`✅ ${friendName} reconnected!`);
+
+    // The host is the source of truth for game state — if we're the
+    // host, push a full snapshot so the guest's client (which just got
+    // a brand new data channel with no memory of where things stood)
+    // catches back up instead of looking frozen or out of sync.
+    if (amHost) {
+      const state = Game.getState();
+      Connection.send({
+        type: 'sync_state',
+        round: state.currentRound,
+        totalRounds: state.TOTAL_ROUNDS,
+        myScoreFromSender: state.myScore,
+        friendScoreFromSender: state.friendScore,
+        isMyTurnFromSender: state.isMyTurn,
+        timeLeft: state.timeLeft,
+      });
+    }
+  });
+
+  Connection.onReconnectFailed(() => {
+    bannerText.textContent = 'Could not reconnect. Your friend may have left.';
+  });
 }
 
 function beginTurnLocal(iAmDrawer, _unused) {
@@ -486,6 +569,7 @@ function onGameEnd({ myScore, friendScore }) {
 }
 
 document.getElementById('btn-play-again').addEventListener('click', () => {
+  VoiceCall.endCall();
   Connection.destroy();
   Game.destroy();
   location.reload();
@@ -493,8 +577,8 @@ document.getElementById('btn-play-again').addEventListener('click', () => {
 
 function updateScoreLabels() {
   const state = Game.getState ? Game.getState() : { myScore: 0, friendScore: 0 };
-  document.getElementById('my-score-label').textContent = `${myName}: ${state.myScore || 0}`;
-  document.getElementById('friend-score-label').textContent = `${friendName}: ${state.friendScore || 0}`;
+  document.querySelector('#my-score-label .score-text').textContent = `${myName}: ${state.myScore || 0}`;
+  document.querySelector('#friend-score-label .score-text').textContent = `${friendName}: ${state.friendScore || 0}`;
 }
 
 // ---------- TOOLBAR ----------
@@ -604,6 +688,72 @@ function setupVoicelineMenu() {
     isOpen ? closeMenu() : openMenu();
   });
   backdrop.addEventListener('click', closeMenu);
+}
+
+// ---------- VOICE CALL ----------
+let voiceCallHandlersRegistered = false;
+function setupVoiceCall() {
+  const callBtn = document.getElementById('btn-call-toggle');
+  const callIcon = document.getElementById('call-icon');
+  const callStatusText = document.getElementById('call-status-text');
+  const muteBtn = document.getElementById('btn-mute-toggle');
+
+  function setCallUIState(state) {
+    // state: 'idle' | 'connecting' | 'active'
+    callBtn.classList.remove('connecting', 'active');
+    if (state === 'connecting') {
+      callBtn.classList.add('connecting');
+      callIcon.textContent = '📞';
+      callStatusText.textContent = 'Connecting...';
+      muteBtn.classList.add('hidden');
+    } else if (state === 'active') {
+      callBtn.classList.add('active');
+      callIcon.textContent = '🎙️';
+      callStatusText.textContent = 'On Call';
+      muteBtn.classList.remove('hidden');
+    } else {
+      callIcon.textContent = '🎙️';
+      callStatusText.textContent = 'Start Call';
+      muteBtn.classList.add('hidden');
+    }
+  }
+
+  // Listen for an incoming call from the friend, regardless of who
+  // taps "Start Call" first — only register this once per page load,
+  // since re-registering on every startGameSession() (e.g. after
+  // "Play Again") would stack duplicate listeners on the same peer.
+  if (!voiceCallHandlersRegistered) {
+    voiceCallHandlersRegistered = true;
+    VoiceCall.listenForIncomingCalls(() => Connection.getRawPeer(), setCallUIState);
+  }
+
+  callBtn.addEventListener('click', async () => {
+    if (VoiceCall.isInCall()) {
+      VoiceCall.endCall();
+      setCallUIState('idle');
+      return;
+    }
+    if (callBtn.classList.contains('connecting')) return; // already dialing, ignore double-taps
+
+    const targetId = Connection.friendPeerId();
+    if (!targetId) {
+      setStatus('Not connected to a friend yet.', true);
+      return;
+    }
+
+    try {
+      await VoiceCall.startCall(() => Connection.getRawPeer(), targetId, setCallUIState);
+    } catch (err) {
+      setCallUIState('idle');
+      addSystemChatMessage('🎙️ Microphone access was blocked — check your browser permissions to use voice call.');
+    }
+  });
+
+  muteBtn.addEventListener('click', () => {
+    const muted = VoiceCall.toggleMute();
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.classList.toggle('muted', muted);
+  });
 }
 
 // ---------- CHAT ----------

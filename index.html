@@ -12,7 +12,7 @@
   <div id="screen-home" class="screen active">
     <div class="brand">
       <h1>Guess<span>Art</span></h1>
-      <p class="credit-line">by Shiva Saini</p>
+      <p class="credit-line">by <span>Shiva Saini</span></p>
       <p class="tagline">draw. guess. roast your friend.</p>
     </div>
 
@@ -56,6 +56,14 @@
   <!-- SCREEN 3: GAME -->
   <div id="screen-game" class="screen screen-game">
 
+    <!-- Shown when the P2P connection drops mid-game; auto-hides once
+         reconnected. Doesn't block interaction (drawing/chat still work
+         locally) since the drop might resolve in a couple seconds. -->
+    <div id="reconnect-banner" class="reconnect-banner hidden">
+      <div class="reconnect-spinner"></div>
+      <span id="reconnect-text">Reconnecting...</span>
+    </div>
+
     <!-- Top bar: round info, timer, scores -->
     <div class="game-topbar">
       <div class="round-info">
@@ -63,9 +71,18 @@
       </div>
       <div class="timer" id="timer-display">70</div>
       <div class="scores">
-        <span id="my-score-label">You: 0</span>
-        <span id="friend-score-label">Friend: 0</span>
+        <span id="my-score-label" class="score-chip"><span class="presence-dot online"></span><span class="score-text">You: 0</span></span>
+        <span id="friend-score-label" class="score-chip"><span id="friend-presence-dot" class="presence-dot online"></span><span id="friend-score-text" class="score-text">Friend: 0</span></span>
       </div>
+    </div>
+
+    <!-- Voice call bar: mic toggle + status, sits right under the topbar -->
+    <div class="call-bar">
+      <button id="btn-call-toggle" class="call-btn" title="Voice call">
+        <span id="call-icon">🎙️</span>
+        <span id="call-status-text">Start Call</span>
+      </button>
+      <button id="btn-mute-toggle" class="call-mute-btn hidden" title="Mute microphone">🔊</button>
     </div>
 
     <!-- Word banner: shown to drawer only, or "Guess the drawing!" to guesser -->
@@ -115,6 +132,9 @@
     <button id="btn-voiceline-fab" class="voiceline-fab" title="Meme voicelines">🎤</button>
     <div id="voiceline-menu" class="voiceline-menu hidden"></div>
     <div id="voiceline-backdrop" class="voiceline-backdrop hidden"></div>
+
+    <!-- Remote voice-call audio plays here — invisible, no controls -->
+    <audio id="remote-call-audio" autoplay playsinline></audio>
   </div>
 
   <!-- SCREEN 4: ROUND RESULT (brief overlay between turns) -->
@@ -151,6 +171,7 @@
   <script src="js/hints.js"></script>
   <script src="js/clues.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/voicecall.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
