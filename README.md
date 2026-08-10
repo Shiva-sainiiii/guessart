@@ -134,3 +134,39 @@ Open Relay Project) to the PeerJS config in `app.js`.
 - Phase 4: In-game chat + emoji reactions
 - Phase 5: Meme voiceline triggers on game events
 - Phase 6: Voice chat (WebRTC media stream, reusing the same peer connection)
+
+## Phase 2.4: UI redesign — voice, topbar, settings, fill tool
+
+- **Voice is now always-on, no "Start Call" step.** The moment both
+  players connect, the app quietly asks for mic permission and opens a
+  background audio channel — no ringing, no accept/decline screen. If
+  the mic permission is denied, voice just silently stays unavailable
+  and the rest of the game still works.
+- **Mic and Speaker are two independent icon toggles** (🎤 / 🔊) in a
+  slim strip under the topbar — no more single confusing "mute" button.
+  - Mic off → your audio isn't sent, you still hear your friend
+  - Speaker off → you don't hear your friend, they still hear you
+  - Both live in the topbar AND inside Settings, kept in sync
+- **Topbar redesigned**: each player now gets a clearly bounded name
+  chip (you on the left, friend on the right) instead of a cramped
+  right-aligned "Name: score" string. Round/timer sit centered between
+  them, with a ⚙️ settings gear on the far right.
+- **New Settings panel** (gear icon): mic/speaker toggles, sound effects
+  toggle, meme voicelines toggle, rename yourself mid-game (announced
+  to your friend in chat), and a Leave Game button.
+- **Fill (bucket) tool** added to the drawing toolbar — tap it, tap a
+  color, then tap an enclosed region on the canvas to flood-fill it.
+  Fills are undo-able and sync to the other player like strokes do.
+- **Color scheme changed** from purple/pink to a teal/coral palette —
+  meant to feel more like a creative sketch tool and less like a
+  generic app template.
+- **Developer credit line restyled** — was oddly left-shifted and
+  wrapping awkwardly; now a small, centered, understated byline under
+  the logo instead of competing with the title for attention.
+
+## Voice implementation notes
+
+Voice reuses the same PeerJS `peer` object the data channel already has
+open — no second signaling connection. Whoever is the **host** places
+the outgoing `peer.call()`; the guest only listens for the incoming
+call event. This avoids both sides dialing each other simultaneously.

@@ -2,23 +2,24 @@
 //
 // Network message protocol (all messages are JSON objects sent via Connection.send):
 //   { type: 'hello', name }                         — sent right after connecting, exchange names
+//   { type: 'rename', name }                          — either player changes their name mid-game via Settings
 //   { type: 'start_turn', drawerIsMe }               — host tells guest whose turn (drawerIsMe is from HOST's perspective, guest flips it)
 //   { type: 'word_length', pattern }                 — drawer tells guesser the word's letter/space pattern (e.g. "LLL LLLLL"), so hint blanks can render (actual letters are never sent here)
 //   { type: 'hint_reveal', index, letter }            — drawer progressively reveals one letter of the hint row to the guesser
 //   { type: 'clue', text }                            — drawer sends a rotating text hint about the word (never contains the word itself)
 //   { type: 'voiceline', id }                          — either player triggers a meme voiceline; both clients play it locally
 //   { type: 'stroke', x1,y1,x2,y2,color,width }      — a drawing segment
+//   { type: 'fill', x, y, color }                      — a bucket-fill action
 //   { type: 'clear' }                                — drawer cleared the canvas
-//   { type: 'undo', segments }                       — drawer removed last stroke; segments is the flattened remaining history to replay
+//   { type: 'undo', history }                          — drawer removed last stroke/fill; history is the remaining stroke+fill list to replay
 //   { type: 'chat', text, name }                     — chat/guess message
 //   { type: 'correct_guess', word }                  — drawer confirms a guess was correct
 //   { type: 'timeout' }                              — drawer's timer ran out with no correct guess
 //   { type: 'next_turn' }                             — signal to advance after result screen
 //   { type: 'sync_state', round, totalRounds, myScoreFromSender, friendScoreFromSender, isMyTurnFromSender, timeLeft, wordLengthPattern } — sent by the HOST right after a reconnect so the guest's client can catch up to the current round/score/timer instead of restarting
-//   { type: 'call-offer', sdp }                       — voice call: caller's WebRTC offer
-//   { type: 'call-answer', sdp }                      — voice call: callee's WebRTC answer
-//   { type: 'call-ice', candidate }                   — voice call: ICE candidate exchange
-//   { type: 'call-end' }                               — voice call: either side hung up
+//   Voice is always-on peer-to-peer audio via PeerJS's call() API directly
+//   (see voicecall.js) — no offer/answer messages needed over our own
+//   data channel since PeerJS handles that signaling internally.
 
 const screens = {
   home: document.getElementById('screen-home'),
@@ -285,6 +286,11 @@ function handleMessage(data) {
       helloReceived = true;
       updateScoreLabels();
       break;
+    case 'rename':
+      friendName = data.name;
+      updateScoreLabels();
+      addSystemChatMessage(`✏️ ${data.oldName} is now known as ${data.name}`);
+      break;
     case 'start_turn': {
       // drawerIsMe field is from the SENDER's perspective; flip for us.
       const iAmDrawer = !data.drawerIsMe;
@@ -306,11 +312,14 @@ function handleMessage(data) {
     case 'stroke':
       DrawCanvas.renderRemoteStroke(data);
       break;
+    case 'fill':
+      DrawCanvas.renderRemoteFill(data);
+      break;
     case 'clear':
       DrawCanvas.clear();
       break;
     case 'undo':
-      DrawCanvas.replay(data.segments);
+      DrawCanvas.replay(data.history);
       break;
     case 'chat':
       handleIncomingChat(data.text, data.name, false, data.msgId);
@@ -346,15 +355,21 @@ function handleMessage(data) {
       // perspective, so on a guest client they're swapped relative to
       // "my" and "friend" here.
       document.getElementById('round-label').textContent = `Round ${data.round}/${data.totalRounds}`;
-      document.querySelector('#my-score-label .score-text').textContent =
-        `${myName}: ${amHost ? data.myScoreFromSender : data.friendScoreFromSender}`;
-      document.querySelector('#friend-score-label .score-text').textContent =
-        `${friendName}: ${amHost ? data.friendScoreFromSender : data.myScoreFromSender}`;
+      setPlayerChip('my', myName, amHost ? data.myScoreFromSender : data.friendScoreFromSender);
+      setPlayerChip('friend', friendName, amHost ? data.friendScoreFromSender : data.myScoreFromSender);
       if (typeof data.timeLeft === 'number') {
         document.getElementById('timer-display').textContent = Math.max(0, data.timeLeft);
       }
       break;
   }
+}
+
+// Sets both the name and score for a player chip in the topbar in one
+// place, since the two are always shown together — avoids the old
+// pattern of separately querying `.score-text` all over the file.
+function setPlayerChip(who, name, score) {
+  document.getElementById(`${who}-score-label`).textContent = name;
+  document.getElementById(`${who}-score-value`).textContent = (score || 0);
 }
 
 function startGameSession() {
@@ -370,15 +385,17 @@ function startGameSession() {
   // 0×0 box and touch coordinates never line up with the drawing.
   showScreen('game');
 
-  DrawCanvas.init(document.getElementById('draw-canvas'), (stroke) => {
-    Connection.send(Object.assign({ type: 'stroke' }, stroke));
-  });
+  DrawCanvas.init(document.getElementById('draw-canvas'),
+    (stroke) => Connection.send(Object.assign({ type: 'stroke' }, stroke)),
+    (fillData) => Connection.send(Object.assign({ type: 'fill' }, fillData))
+  );
 
   setupToolbar();
   setupChat();
   setupVoicelineMenu();
   setupReconnectHandling();
   setupVoiceCall();
+  setupSettingsPanel();
 
   Game.beginGame(amHost);
   updateScoreLabels();
@@ -577,8 +594,8 @@ document.getElementById('btn-play-again').addEventListener('click', () => {
 
 function updateScoreLabels() {
   const state = Game.getState ? Game.getState() : { myScore: 0, friendScore: 0 };
-  document.querySelector('#my-score-label .score-text').textContent = `${myName}: ${state.myScore || 0}`;
-  document.querySelector('#friend-score-label .score-text').textContent = `${friendName}: ${state.friendScore || 0}`;
+  setPlayerChip('my', myName, state.myScore);
+  setPlayerChip('friend', friendName, state.friendScore);
 }
 
 // ---------- TOOLBAR ----------
@@ -593,7 +610,9 @@ function setupToolbar() {
       document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
       sw.classList.add('active');
       DrawCanvas.setColor(color);
-      document.getElementById('btn-eraser').classList.remove('active'); // picking a color exits eraser mode
+      // Picking a color exits both eraser and fill modes.
+      document.getElementById('btn-eraser').classList.remove('active');
+      document.getElementById('btn-fill').classList.remove('active');
     });
     swatchContainer.appendChild(sw);
   });
@@ -609,19 +628,26 @@ function setupToolbar() {
   });
   document.getElementById('btn-width-medium').classList.add('active');
 
+  document.getElementById('btn-fill').addEventListener('click', (e) => {
+    if (!Game.isDrawerTurn()) return;
+    const nowFilling = !DrawCanvas.isFillMode();
+    DrawCanvas.setFillMode(nowFilling);
+    e.target.classList.toggle('active', nowFilling);
+    document.getElementById('btn-eraser').classList.remove('active'); // fill and eraser are mutually exclusive
+  });
+
   document.getElementById('btn-eraser').addEventListener('click', (e) => {
     if (!Game.isDrawerTurn()) return;
     const nowErasing = !DrawCanvas.isEraser();
     DrawCanvas.setEraser(nowErasing);
     e.target.classList.toggle('active', nowErasing);
-    // Turning the eraser on/off doesn't change the last-picked color
-    // swatch highlight — eraser is a separate mode layered on top.
+    document.getElementById('btn-fill').classList.remove('active'); // fill and eraser are mutually exclusive
   });
 
   document.getElementById('btn-undo').addEventListener('click', () => {
     if (!Game.isDrawerTurn() || !DrawCanvas.hasHistory()) return;
-    const remainingSegments = DrawCanvas.undo();
-    Connection.send({ type: 'undo', segments: remainingSegments });
+    const remainingHistory = DrawCanvas.undo();
+    Connection.send({ type: 'undo', history: remainingHistory });
   });
 
   document.getElementById('btn-clear-canvas').addEventListener('click', () => {
@@ -690,69 +716,135 @@ function setupVoicelineMenu() {
   backdrop.addEventListener('click', closeMenu);
 }
 
-// ---------- VOICE CALL ----------
+// ---------- VOICE — always-on, Mic + Speaker are independent toggles ----------
 let voiceCallHandlersRegistered = false;
 function setupVoiceCall() {
-  const callBtn = document.getElementById('btn-call-toggle');
-  const callIcon = document.getElementById('call-icon');
-  const callStatusText = document.getElementById('call-status-text');
-  const muteBtn = document.getElementById('btn-mute-toggle');
+  const micBtn = document.getElementById('btn-mic-toggle');
+  const speakerBtn = document.getElementById('btn-speaker-toggle');
+  const statusText = document.getElementById('voice-status-text');
 
-  function setCallUIState(state) {
-    // state: 'idle' | 'connecting' | 'active'
-    callBtn.classList.remove('connecting', 'active');
-    if (state === 'connecting') {
-      callBtn.classList.add('connecting');
-      callIcon.textContent = '📞';
-      callStatusText.textContent = 'Connecting...';
-      muteBtn.classList.add('hidden');
-    } else if (state === 'active') {
-      callBtn.classList.add('active');
-      callIcon.textContent = '🎙️';
-      callStatusText.textContent = 'On Call';
-      muteBtn.classList.remove('hidden');
+  function setVoiceState(state) {
+    // state: 'connected' | 'disconnected' | 'unavailable'
+    if (state === 'connected') {
+      statusText.textContent = '';
+      statusText.classList.add('hidden');
+    } else if (state === 'unavailable') {
+      statusText.textContent = 'Voice unavailable (mic blocked)';
+      statusText.classList.remove('hidden');
+      micBtn.disabled = true;
+      speakerBtn.disabled = true;
     } else {
-      callIcon.textContent = '🎙️';
-      callStatusText.textContent = 'Start Call';
-      muteBtn.classList.add('hidden');
+      statusText.textContent = 'Voice connecting…';
+      statusText.classList.remove('hidden');
     }
   }
 
-  // Listen for an incoming call from the friend, regardless of who
-  // taps "Start Call" first — only register this once per page load,
-  // since re-registering on every startGameSession() (e.g. after
-  // "Play Again") would stack duplicate listeners on the same peer.
+  // Only wire the incoming-call listener + auto-dial once per page load
+  // (re-running on every startGameSession(), e.g. after "Play Again",
+  // would stack duplicate listeners on the same underlying peer).
   if (!voiceCallHandlersRegistered) {
     voiceCallHandlersRegistered = true;
-    VoiceCall.listenForIncomingCalls(() => Connection.getRawPeer(), setCallUIState);
+    const targetId = Connection.friendPeerId();
+    // Only the host places the outgoing call — the guest just listens.
+    // This avoids both sides simultaneously dialing each other, which
+    // PeerJS can handle but there's no reason to invite the race.
+    VoiceCall.autoConnect(() => Connection.getRawPeer(), amHost, targetId, setVoiceState);
   }
 
-  callBtn.addEventListener('click', async () => {
-    if (VoiceCall.isInCall()) {
-      VoiceCall.endCall();
-      setCallUIState('idle');
-      return;
-    }
-    if (callBtn.classList.contains('connecting')) return; // already dialing, ignore double-taps
-
-    const targetId = Connection.friendPeerId();
-    if (!targetId) {
-      setStatus('Not connected to a friend yet.', true);
-      return;
-    }
-
-    try {
-      await VoiceCall.startCall(() => Connection.getRawPeer(), targetId, setCallUIState);
-    } catch (err) {
-      setCallUIState('idle');
-      addSystemChatMessage('🎙️ Microphone access was blocked — check your browser permissions to use voice call.');
-    }
+  micBtn.addEventListener('click', () => {
+    const on = VoiceCall.toggleMic();
+    micBtn.classList.toggle('on', on);
+    micBtn.textContent = on ? '🎤' : '🔇';
+    syncSettingsToggle('settings-mic-toggle', on);
   });
 
-  muteBtn.addEventListener('click', () => {
-    const muted = VoiceCall.toggleMute();
-    muteBtn.textContent = muted ? '🔇' : '🔊';
-    muteBtn.classList.toggle('muted', muted);
+  speakerBtn.addEventListener('click', () => {
+    const on = VoiceCall.toggleSpeaker();
+    speakerBtn.classList.toggle('on', on);
+    speakerBtn.textContent = on ? '🔊' : '🔈';
+    syncSettingsToggle('settings-speaker-toggle', on);
+  });
+}
+
+// ---------- SETTINGS PANEL ----------
+function syncSettingsToggle(id, on) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('on', on);
+}
+
+function setupSettingsPanel() {
+  const panel = document.getElementById('settings-panel');
+  const backdrop = document.getElementById('settings-backdrop');
+  const gearBtn = document.getElementById('btn-settings');
+  const closeBtn = document.getElementById('btn-settings-close');
+  const nameInput = document.getElementById('settings-name-input');
+  const voiceHint = document.getElementById('settings-voice-hint');
+
+  function openPanel() {
+    nameInput.value = myName;
+    voiceHint.textContent = VoiceCall.isMicAvailable()
+      ? ''
+      : 'Microphone permission was not granted — voice chat is unavailable this session.';
+
+    // Reflect current live state every time the panel opens, since these
+    // can also be changed from the topbar icons while the panel is closed.
+    syncSettingsToggle('settings-mic-toggle', VoiceCall.isMicOn());
+    syncSettingsToggle('settings-speaker-toggle', VoiceCall.isSpeakerOn());
+    syncSettingsToggle('settings-sfx-toggle', AudioFX.isSfxOn ? AudioFX.isSfxOn() : true);
+    syncSettingsToggle('settings-voicelines-toggle', AudioFX.isVoicelinesOn ? AudioFX.isVoicelinesOn() : true);
+
+    panel.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  }
+  function closePanel() {
+    panel.classList.add('hidden');
+    backdrop.classList.add('hidden');
+  }
+
+  gearBtn.addEventListener('click', openPanel);
+  closeBtn.addEventListener('click', closePanel);
+  backdrop.addEventListener('click', closePanel);
+
+  document.getElementById('settings-mic-toggle').addEventListener('click', (e) => {
+    const on = VoiceCall.toggleMic();
+    e.currentTarget.classList.toggle('on', on);
+    const micBtn = document.getElementById('btn-mic-toggle');
+    micBtn.classList.toggle('on', on);
+    micBtn.textContent = on ? '🎤' : '🔇';
+  });
+
+  document.getElementById('settings-speaker-toggle').addEventListener('click', (e) => {
+    const on = VoiceCall.toggleSpeaker();
+    e.currentTarget.classList.toggle('on', on);
+    const speakerBtn = document.getElementById('btn-speaker-toggle');
+    speakerBtn.classList.toggle('on', on);
+    speakerBtn.textContent = on ? '🔊' : '🔈';
+  });
+
+  document.getElementById('settings-sfx-toggle').addEventListener('click', (e) => {
+    const on = AudioFX.toggleSfx ? AudioFX.toggleSfx() : true;
+    e.currentTarget.classList.toggle('on', on);
+  });
+
+  document.getElementById('settings-voicelines-toggle').addEventListener('click', (e) => {
+    const on = AudioFX.toggleVoicelines ? AudioFX.toggleVoicelines() : true;
+    e.currentTarget.classList.toggle('on', on);
+  });
+
+  nameInput.addEventListener('change', () => {
+    const newName = nameInput.value.trim();
+    if (!newName || newName === myName) return;
+    const oldName = myName;
+    myName = newName;
+    updateScoreLabels();
+    Connection.send({ type: 'rename', name: myName, oldName });
+  });
+
+  document.getElementById('btn-leave-game').addEventListener('click', () => {
+    Connection.destroy();
+    VoiceCall.endCall();
+    Game.destroy();
+    location.reload();
   });
 }
 

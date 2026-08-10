@@ -64,25 +64,39 @@
       <span id="reconnect-text">Reconnecting...</span>
     </div>
 
-    <!-- Top bar: round info, timer, scores -->
+    <!-- Top bar: player identity chips (left=me, right=friend), round + timer center, settings gear -->
     <div class="game-topbar">
-      <div class="round-info">
-        <span id="round-label">Round 1/8</span>
+      <div class="player-chip me">
+        <span class="presence-dot online"></span>
+        <div class="player-chip-text">
+          <span id="my-score-label" class="player-name">You</span>
+          <span id="my-score-value" class="player-score">0</span>
+        </div>
       </div>
-      <div class="timer" id="timer-display">70</div>
-      <div class="scores">
-        <span id="my-score-label" class="score-chip"><span class="presence-dot online"></span><span class="score-text">You: 0</span></span>
-        <span id="friend-score-label" class="score-chip"><span id="friend-presence-dot" class="presence-dot online"></span><span id="friend-score-text" class="score-text">Friend: 0</span></span>
+
+      <div class="topbar-center">
+        <span id="round-label" class="round-info">Round 1/8</span>
+        <div class="timer" id="timer-display">70</div>
       </div>
+
+      <div class="player-chip friend">
+        <div class="player-chip-text">
+          <span id="friend-score-label" class="player-name">Friend</span>
+          <span id="friend-score-value" class="player-score">0</span>
+        </div>
+        <span id="friend-presence-dot" class="presence-dot online"></span>
+      </div>
+
+      <button id="btn-settings" class="settings-gear-btn" title="Settings">⚙️</button>
     </div>
 
-    <!-- Voice call bar: mic toggle + status, sits right under the topbar -->
-    <div class="call-bar">
-      <button id="btn-call-toggle" class="call-btn" title="Voice call">
-        <span id="call-icon">🎙️</span>
-        <span id="call-status-text">Start Call</span>
-      </button>
-      <button id="btn-mute-toggle" class="call-mute-btn hidden" title="Mute microphone">🔊</button>
+    <!-- Voice strip: two independent icon toggles, no call/connecting UI at all.
+         Mic = send my audio. Speaker = hear their audio. Both default on;
+         voice connects silently in the background once both peers join. -->
+    <div class="voice-strip">
+      <button id="btn-mic-toggle" class="voice-icon-btn on" title="Microphone">🎤</button>
+      <span id="voice-status-text" class="voice-status-text">Voice connecting…</span>
+      <button id="btn-speaker-toggle" class="voice-icon-btn on" title="Speaker">🔊</button>
     </div>
 
     <!-- Word banner: shown to drawer only, or "Guess the drawing!" to guesser -->
@@ -112,6 +126,7 @@
         <button class="btn-icon" id="btn-width-medium" title="Medium">⬤</button>
         <button class="btn-icon" id="btn-width-large" title="Thick">⚫</button>
       </div>
+      <button class="btn-icon" id="btn-fill" title="Fill">🪣</button>
       <button class="btn-icon" id="btn-eraser" title="Eraser">🧹</button>
       <button class="btn-icon" id="btn-undo" title="Undo last stroke">↩️</button>
       <button class="btn-icon" id="btn-clear-canvas" title="Clear canvas">🗑️</button>
@@ -135,6 +150,53 @@
 
     <!-- Remote voice-call audio plays here — invisible, no controls -->
     <audio id="remote-call-audio" autoplay playsinline></audio>
+
+    <!-- Settings panel: opens via the gear icon in the topbar. Covers
+         mic/speaker device state, sound effect volume, and renaming
+         yourself mid-game (name only updates locally + is announced
+         to the friend, doesn't require restarting the room). -->
+    <div id="settings-backdrop" class="settings-backdrop hidden"></div>
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h3>Settings</h3>
+        <button id="btn-settings-close" class="btn-icon">✕</button>
+      </div>
+
+      <div class="settings-section">
+        <p class="settings-label">Voice</p>
+        <div class="settings-row">
+          <span>Microphone</span>
+          <button id="settings-mic-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <span>Speaker (hear friend)</span>
+          <button id="settings-speaker-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
+        </div>
+        <p id="settings-voice-hint" class="settings-hint"></p>
+      </div>
+
+      <div class="settings-section">
+        <p class="settings-label">Sound</p>
+        <div class="settings-row">
+          <span>Sound effects</span>
+          <button id="settings-sfx-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <span>Meme voicelines</span>
+          <button id="settings-voicelines-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <p class="settings-label">Player</p>
+        <div class="settings-row settings-row-input">
+          <span>Your name</span>
+          <input id="settings-name-input" type="text" maxlength="14">
+        </div>
+      </div>
+
+      <button id="btn-leave-game" class="btn btn-ghost settings-leave-btn">Leave Game</button>
+    </div>
   </div>
 
   <!-- SCREEN 4: ROUND RESULT (brief overlay between turns) -->

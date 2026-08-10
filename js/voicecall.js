@@ -1,27 +1,29 @@
-// ===== voicecall.js — Peer-to-peer voice call (Free-Fire style) =====
+// ===== voicecall.js — Always-on peer-to-peer voice (Discord-style) =====
 //
-// Reuses the SAME PeerJS `peer` object that Connection already has open
-// for the data channel — no second connection, no signaling server of
-// our own. PeerJS's peer.call(id, stream) wraps a full WebRTC audio
-// offer/answer/ICE exchange through the existing peer signaling link.
-//
-// Either side can start the call; the other side gets an incoming-call
-// event and auto-answers (this is a 2-friend casual game, not a
-// stranger-calling scenario, so there's no need for a ring/accept UI —
-// tapping "Start Call" on one side just connects immediately once the
-// other side's mic permission resolves).
+// No "Start Call" step — the moment both players are connected, we try
+// to open a live audio channel automatically in the background. There's
+// no ringing/accept UI; this is a 2-friend casual game, not a stranger
+// call. Mic and Speaker are two INDEPENDENT toggles:
+//   - Mic off  → your audio track is disabled, you still hear them
+//   - Speaker off → the remote <audio> element is muted locally, you
+//                    still send your own audio
+// If mic permission is denied or unavailable, we fail silently — voice
+// just doesn't come up, text/emoji/drawing still work fine.
 
 const VoiceCall = (() => {
   let localStream = null;
   let activeCall = null;
-  let isMuted = false;
-  let inCall = false;
+  let micOn = true;
+  let speakerOn = true;
+  let connected = false;
+  let micAvailable = false;
 
   const remoteAudioEl = document.getElementById('remote-call-audio');
 
   async function getMic() {
     if (localStream) return localStream;
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    micAvailable = true;
     return localStream;
   }
 
@@ -29,56 +31,54 @@ const VoiceCall = (() => {
     activeCall = call;
     call.on('stream', (remoteStream) => {
       remoteAudioEl.srcObject = remoteStream;
-      inCall = true;
-      onStateChange && onStateChange('active');
+      remoteAudioEl.muted = !speakerOn;
+      connected = true;
+      onStateChange && onStateChange('connected');
     });
     call.on('close', () => {
-      inCall = false;
+      connected = false;
       activeCall = null;
-      onStateChange && onStateChange('idle');
+      onStateChange && onStateChange('disconnected');
     });
     call.on('error', (err) => {
       console.error('[VoiceCall] call error:', err);
-      inCall = false;
+      connected = false;
       activeCall = null;
-      onStateChange && onStateChange('idle');
+      onStateChange && onStateChange('disconnected');
     });
   }
 
   return {
-    // Call this once when the game screen loads — listens for an
-    // incoming call from the peer and auto-answers with our own mic.
-    // getPeerObject is a function returning PeerJS's raw `peer`
-    // instance (Connection doesn't expose it directly by default).
-    listenForIncomingCalls(getPeerObject, onStateChange) {
+    // Called once the game screen is up. Silently attempts to open the
+    // mic and dial the friend; if the host, we place the call — if not,
+    // we just listen for the incoming one. Never throws to the caller;
+    // failures just mean voice is unavailable this session.
+    async autoConnect(getPeerObject, isHost, targetPeerId, onStateChange) {
       const peer = getPeerObject();
       if (!peer) return;
+
+      // Always listen for an incoming call, regardless of host/guest —
+      // covers reconnect scenarios where roles could re-dial either way.
       peer.on('call', async (call) => {
         try {
-          onStateChange && onStateChange('connecting');
           const stream = await getMic();
           call.answer(stream);
           wireCallEvents(call, onStateChange);
         } catch (err) {
-          console.error('[VoiceCall] mic permission denied or failed:', err);
-          onStateChange && onStateChange('idle');
+          console.warn('[VoiceCall] mic unavailable, answering without audio:', err);
+          onStateChange && onStateChange('unavailable');
         }
       });
-    },
 
-    // Starts an outgoing call to the given peer ID.
-    async startCall(getPeerObject, targetPeerId, onStateChange) {
-      const peer = getPeerObject();
-      if (!peer || !targetPeerId) return;
-      try {
-        onStateChange && onStateChange('connecting');
-        const stream = await getMic();
-        const call = peer.call(targetPeerId, stream);
-        wireCallEvents(call, onStateChange);
-      } catch (err) {
-        console.error('[VoiceCall] failed to start call:', err);
-        onStateChange && onStateChange('idle');
-        throw err; // let the caller show a permission-denied message
+      if (isHost && targetPeerId) {
+        try {
+          const stream = await getMic();
+          const call = peer.call(targetPeerId, stream);
+          wireCallEvents(call, onStateChange);
+        } catch (err) {
+          console.warn('[VoiceCall] mic permission denied, voice unavailable:', err);
+          onStateChange && onStateChange('unavailable');
+        }
       }
     },
 
@@ -86,18 +86,29 @@ const VoiceCall = (() => {
       if (activeCall) { activeCall.close(); activeCall = null; }
       if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
       remoteAudioEl.srcObject = null;
-      inCall = false;
-      isMuted = false;
+      connected = false;
+      micOn = true;
+      speakerOn = true;
     },
 
-    toggleMute() {
-      if (!localStream) return isMuted;
-      isMuted = !isMuted;
-      localStream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
-      return isMuted;
+    // Independent toggle: only affects whether OUR audio is sent.
+    toggleMic() {
+      if (!localStream) return micOn;
+      micOn = !micOn;
+      localStream.getAudioTracks().forEach(t => { t.enabled = micOn; });
+      return micOn;
     },
 
-    isInCall() { return inCall; },
-    isMuted() { return isMuted; },
+    // Independent toggle: only affects whether WE hear them (local playback mute).
+    toggleSpeaker() {
+      speakerOn = !speakerOn;
+      remoteAudioEl.muted = !speakerOn;
+      return speakerOn;
+    },
+
+    isConnected() { return connected; },
+    isMicOn() { return micOn; },
+    isSpeakerOn() { return speakerOn; },
+    isMicAvailable() { return micAvailable; },
   };
 })();

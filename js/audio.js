@@ -33,7 +33,8 @@ const AudioFX = (() => {
   };
 
   const cache = {};
-  let muted = false;
+  let sfxMuted = false;
+  let voicelinesMuted = false;
 
   function load(file) {
     if (!cache[file]) {
@@ -44,8 +45,8 @@ const AudioFX = (() => {
     return cache[file];
   }
 
-  function play(file) {
-    if (muted) return;
+  function play(file, isVoiceline) {
+    if (isVoiceline ? voicelinesMuted : sfxMuted) return;
     try {
       const el = load(file);
       // Clone so rapid repeat taps (e.g. spamming a voiceline) don't cut
@@ -66,16 +67,22 @@ const AudioFX = (() => {
 
     playVoiceline(id) {
       const v = VOICELINES.find(v => v.id === id);
-      if (v) play(v.file);
+      if (v) play(v.file, true);
     },
 
-    playRoundCountdown() { play(SFX.roundCountdown); },
-    playTurnStart() { play(SFX.turnStart); },
-    playCorrectGuess() { play(SFX.correctGuess); },
-    playWin() { play(SFX.win); },
-    playLose() { play(SFX.lose); },
+    playRoundCountdown() { play(SFX.roundCountdown, false); },
+    playTurnStart() { play(SFX.turnStart, false); },
+    playCorrectGuess() { play(SFX.correctGuess, false); },
+    playWin() { play(SFX.win, false); },
+    playLose() { play(SFX.lose, false); },
 
-    setMuted(value) { muted = value; },
-    isMuted() { return muted; },
+    // Kept for compatibility — mutes both categories at once.
+    setMuted(value) { sfxMuted = value; voicelinesMuted = value; },
+    isMuted() { return sfxMuted && voicelinesMuted; },
+
+    toggleSfx() { sfxMuted = !sfxMuted; return !sfxMuted; },
+    toggleVoicelines() { voicelinesMuted = !voicelinesMuted; return !voicelinesMuted; },
+    isSfxOn() { return !sfxMuted; },
+    isVoicelinesOn() { return !voicelinesMuted; },
   };
 })();

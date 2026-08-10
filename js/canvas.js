@@ -8,22 +8,28 @@ const DrawCanvas = (() => {
   let currentColor = '#1a1a22';
   let currentWidth = 4;
   let isEraser = false;
+  let isFillMode = false;
   let lastX = 0, lastY = 0;
   let canDraw = false; // only the active drawer can draw
   let onLocalStroke = null; // callback(strokeData) to send over the wire
+  let onLocalFill = null;   // callback(fillData) to send over the wire
 
-  // Stroke history for undo. Each entry is one continuous pen-down..pen-up
-  // gesture (an array of segments), so one Undo tap removes one visible
-  // "line" the way people expect, not just the last tiny segment.
-  let strokeHistory = [];   // array of { segments: [...] }
+  // History for undo. Each entry is either a stroke gesture
+  // { segments: [...] } or a fill action { fill: { x, y, color } }, kept
+  // in the order they happened so redraw/undo replays everything correctly.
+  let strokeHistory = [];
   let currentGesture = null;
   const MAX_HISTORY = 60;   // cap so long sessions don't grow memory unbounded
 
   function redrawAll() {
     const rect = canvas.getBoundingClientRect();
     ctx.clearRect(0, 0, rect.width, rect.height);
-    strokeHistory.forEach(gesture => {
-      gesture.segments.forEach(s => drawSegmentRaw(s.x1, s.y1, s.x2, s.y2, s.color, s.width, s.erase));
+    strokeHistory.forEach(entry => {
+      if (entry.fill) {
+        floodFillRaw(entry.fill.x, entry.fill.y, entry.fill.color);
+      } else {
+        entry.segments.forEach(s => drawSegmentRaw(s.x1, s.y1, s.x2, s.y2, s.color, s.width, s.erase));
+      }
     });
   }
 
@@ -38,6 +44,75 @@ const DrawCanvas = (() => {
     ctx.lineTo(x2 * rect.width, y2 * rect.height);
     ctx.stroke();
     ctx.restore();
+  }
+
+  function hexToRgba(hex) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return [r, g, b, 255];
+  }
+
+  // Classic 4-directional flood fill on the canvas's raw pixel buffer.
+  // x,y come in as normalized (0-1) coordinates, same as strokes, so fills
+  // sync and replay identically regardless of each player's canvas size.
+  function floodFillRaw(nx, ny, colorHex) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(rect.width * dpr);
+    const h = Math.round(rect.height * dpr);
+    if (w === 0 || h === 0) return;
+
+    const startX = Math.floor(nx * w);
+    const startY = Math.floor(ny * h);
+    if (startX < 0 || startY < 0 || startX >= w || startY >= h) return;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const [fr, fg, fb, fa] = hexToRgba(colorHex);
+
+    const startIdx = (startY * w + startX) * 4;
+    const startR = data[startIdx], startG = data[startIdx + 1], startB = data[startIdx + 2], startA = data[startIdx + 3];
+
+    // Already filled with this exact color — nothing to do.
+    if (startR === fr && startG === fg && startB === fb && startA === fa) return;
+
+    const matches = (idx) =>
+      data[idx] === startR && data[idx + 1] === startG && data[idx + 2] === startB && data[idx + 3] === startA;
+
+    // Iterative stack-based fill (recursion would blow the call stack on
+    // large canvases). Scanline variant keeps this fast enough for a
+    // typical phone-sized drawing area.
+    const stack = [[startX, startY]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      let leftX = x;
+      let idx = (y * w + leftX) * 4;
+      while (leftX >= 0 && matches(idx)) { leftX--; idx -= 4; }
+      leftX++;
+
+      let rightX = x;
+      idx = (y * w + rightX) * 4;
+      while (rightX < w && matches(idx)) { rightX++; idx += 4; }
+      rightX--;
+
+      for (let i = leftX; i <= rightX; i++) {
+        const fillIdx = (y * w + i) * 4;
+        data[fillIdx] = fr; data[fillIdx + 1] = fg; data[fillIdx + 2] = fb; data[fillIdx + 3] = fa;
+
+        if (y > 0) {
+          const upIdx = ((y - 1) * w + i) * 4;
+          if (matches(upIdx)) stack.push([i, y - 1]);
+        }
+        if (y < h - 1) {
+          const downIdx = ((y + 1) * w + i) * 4;
+          if (matches(downIdx)) stack.push([i, y + 1]);
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
   }
 
   function resizeCanvas() {
@@ -56,14 +131,6 @@ const DrawCanvas = (() => {
     // requestAnimationFrame follow-up call in init()).
     if (canvas.width === targetWidth && canvas.height === targetHeight) return;
 
-    // Preserve drawing on resize by snapshotting, resizing, redrawing scaled.
-    const prev = document.createElement('canvas');
-    prev.width = canvas.width;
-    prev.height = canvas.height;
-    if (canvas.width > 0 && canvas.height > 0) {
-      prev.getContext('2d').drawImage(canvas, 0, 0);
-    }
-
     canvas.width = targetWidth;
     canvas.height = targetHeight;
     canvas.style.width = rect.width + 'px';
@@ -77,9 +144,10 @@ const DrawCanvas = (() => {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (prev.width > 0 && prev.height > 0) {
-      ctx.drawImage(prev, 0, 0, prev.width, prev.height, 0, 0, rect.width, rect.height);
-    }
+    // Re-render from the stored history at the new size, rather than
+    // stretching old pixels — this also makes fills re-flow correctly
+    // after a resize instead of leaving stale colored regions.
+    redrawAll();
   }
 
   function getPointerPos(e) {
@@ -93,8 +161,18 @@ const DrawCanvas = (() => {
   function handleStart(e) {
     if (!canDraw) return;
     e.preventDefault();
-    isDrawing = true;
     const pos = getPointerPos(e);
+
+    if (isFillMode) {
+      const fillData = { x: pos.x, y: pos.y, color: currentColor };
+      floodFillRaw(fillData.x, fillData.y, fillData.color);
+      strokeHistory.push({ fill: fillData });
+      if (strokeHistory.length > MAX_HISTORY) strokeHistory.shift();
+      onLocalFill && onLocalFill(fillData);
+      return;
+    }
+
+    isDrawing = true;
     lastX = pos.x;
     lastY = pos.y;
 
@@ -108,7 +186,7 @@ const DrawCanvas = (() => {
   }
 
   function handleMove(e) {
-    if (!canDraw || !isDrawing) return;
+    if (!canDraw || !isDrawing || isFillMode) return;
     e.preventDefault();
     const pos = getPointerPos(e);
     const stroke = { x1: lastX, y1: lastY, x2: pos.x, y2: pos.y, color: currentColor, width: currentWidth, erase: isEraser };
@@ -129,10 +207,11 @@ const DrawCanvas = (() => {
   }
 
   return {
-    init(canvasEl, strokeCallback) {
+    init(canvasEl, strokeCallback, fillCallback) {
       canvas = canvasEl;
       ctx = canvas.getContext('2d');
       onLocalStroke = strokeCallback;
+      onLocalFill = fillCallback;
 
       // Canvas's parent might not be laid out yet (e.g. screen still
       // display:none at this exact moment) — resize now and again on the
@@ -168,24 +247,29 @@ const DrawCanvas = (() => {
       drawSegmentRaw(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.erase);
     },
 
-    // Drawer-side undo: pop the last gesture, repaint locally, and return
-    // the flattened remaining segments so app.js can send them to the
-    // guesser for an exact replay (simplest correct way to keep both
-    // canvases in sync without a heavier diff protocol).
+    // Called when a fill action arrives from the remote peer.
+    renderRemoteFill(fillData) {
+      floodFillRaw(fillData.x, fillData.y, fillData.color);
+    },
+
+    // Drawer-side undo: pop the last entry (stroke gesture OR fill),
+    // repaint locally by replaying full history, and return the
+    // remaining history so app.js can send it to the guesser for an
+    // exact replay (simplest correct way to keep both canvases in sync
+    // without a heavier diff protocol).
     undo() {
       strokeHistory.pop();
       redrawAll();
-      const flatSegments = [];
-      strokeHistory.forEach(g => g.segments.forEach(s => flatSegments.push(s)));
-      return flatSegments;
+      return strokeHistory.slice();
     },
 
-    // Guesser-side: receives the drawer's flattened remaining segments
-    // after an undo and repaints exactly to match.
-    replay(segmentsFlat) {
+    // Guesser-side: receives the drawer's remaining history after an
+    // undo and repaints exactly to match.
+    replay(history) {
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
-      segmentsFlat.forEach(s => drawSegmentRaw(s.x1, s.y1, s.x2, s.y2, s.color, s.width, s.erase));
+      strokeHistory = history.slice();
+      redrawAll();
     },
 
     clear() {
@@ -198,10 +282,12 @@ const DrawCanvas = (() => {
     hasHistory() { return strokeHistory.length > 0; },
 
     setCanDraw(value) { canDraw = value; },
-    setColor(color) { currentColor = color; isEraser = false; },
+    setColor(color) { currentColor = color; isEraser = false; isFillMode = false; },
     setWidth(width) { currentWidth = width; },
-    setEraser(value) { isEraser = value; },
+    setEraser(value) { isEraser = value; if (value) isFillMode = false; },
+    setFillMode(value) { isFillMode = value; if (value) isEraser = false; },
     isEraser() { return isEraser; },
+    isFillMode() { return isFillMode; },
     getColor() { return currentColor; },
   };
 })();
