@@ -29,6 +29,64 @@ const screens = {
   gameOver: document.getElementById('screen-game-over'),
 };
 
+// ---------- VIEWPORT LOCK ----------
+// Keeps .screen-game's height pinned to the actual layout viewport
+// instead of live 100dvh, so opening the on-screen keyboard never
+// resizes the topbar/canvas/toolbar — only the chat panel's own
+// scroll area feels it (see .screen-game in style.css).
+//
+// Strategy: track the LARGEST height we've seen for the current
+// orientation and use that as the locked value. The keyboard opening
+// always SHRINKS the visual viewport, so a drop from the max is
+// treated as "keyboard opened" and ignored. A genuine change (browser
+// chrome show/hide while the keyboard is closed, or an actual
+// orientation flip) is picked up because either the width changes
+// (orientation) or, once the keyboard closes again, the height
+// returns to — or exceeds — the previous max and re-locks there.
+function lockViewportHeight() {
+  const vv = window.visualViewport;
+  let maxHeight = (vv ? vv.height : window.innerHeight);
+  let lastWidth = (vv ? vv.width : window.innerWidth);
+
+  function apply(h) {
+    document.documentElement.style.setProperty('--app-vh', (h / 100) + 'px');
+  }
+  apply(maxHeight);
+
+  function onViewportChange() {
+    const h = vv ? vv.height : window.innerHeight;
+    const w = vv ? vv.width : window.innerWidth;
+
+    if (w !== lastWidth) {
+      // Orientation/window shape actually changed — reset the tracked
+      // max entirely and adopt the new height right away.
+      lastWidth = w;
+      maxHeight = h;
+      apply(maxHeight);
+      return;
+    }
+
+    if (h > maxHeight) {
+      // Height grew back (keyboard closed, or browser chrome
+      // collapsed) — safe to trust and adopt as the new baseline.
+      maxHeight = h;
+      apply(maxHeight);
+    }
+    // else: height shrank while width stayed the same — almost
+    // certainly the keyboard opening. Deliberately do nothing, so
+    // --app-vh (and .screen-game's height) stays put.
+  }
+
+  if (vv) {
+    vv.addEventListener('resize', onViewportChange);
+  } else {
+    // Older browsers without visualViewport support: fall back to
+    // window resize, same grow-only logic.
+    window.addEventListener('resize', onViewportChange);
+  }
+}
+lockViewportHeight();
+
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   screens[name].classList.add('active');

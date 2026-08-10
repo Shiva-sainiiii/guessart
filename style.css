@@ -9,6 +9,7 @@
   --success: #4ade80;
   --border: #253531;
   --radius: 16px;
+  --app-vh: 1vh; /* overwritten in px by lockViewportHeight() in app.js once JS runs */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -387,12 +388,19 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   position: relative;
   max-width: 100%;
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
+  /* Locked to the layout viewport height by JS (see lockViewportHeight
+     in app.js) instead of 100dvh. dvh shrinks live when the on-screen
+     keyboard opens, which was resizing this WHOLE screen — topbar,
+     canvas and all — every time someone tapped the chat input. Now
+     only --app-vh is set once (and on real orientation/resize
+     changes), so the keyboard opening no longer touches this at all;
+     the chat panel's own scroll area absorbs the space the keyboard
+     takes instead. */
+  height: calc(var(--app-vh, 1vh) * 100);
   padding: 8px;
   justify-content: flex-start;
   gap: 6px;
-  overflow: hidden; /* keyboard opening must never push the whole layout around */
+  overflow: hidden;
 }
 
 .game-panel-top,

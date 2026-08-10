@@ -235,13 +235,23 @@ const DrawCanvas = (() => {
       resizeCanvas();
       requestAnimationFrame(resizeCanvas);
 
-      // Debounce window resize (mobile keyboard open/close fires this a
-      // lot) so we don't thrash the canvas mid-typing.
+      // Debounce resize (mobile keyboard open/close fires viewport
+      // events a lot) so we don't thrash the canvas mid-typing. Since
+      // .screen-game's height is now locked by lockViewportHeight()
+      // in app.js, the canvas's actual layout box no longer changes
+      // just because the keyboard opened — this listener mainly
+      // exists to catch a genuine orientation change or window resize
+      // (desktop browser testing), where re-measuring is correct.
       let resizeTimer = null;
-      window.addEventListener('resize', () => {
+      const scheduleResize = () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(resizeCanvas, 200);
-      });
+      };
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scheduleResize);
+      } else {
+        window.addEventListener('resize', scheduleResize);
+      }
 
       canvas.addEventListener('mousedown', handleStart);
       canvas.addEventListener('mousemove', handleMove);
