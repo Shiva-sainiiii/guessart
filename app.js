@@ -35,55 +35,60 @@ const screens = {
 // resizes the topbar/canvas/toolbar — only the chat panel's own
 // scroll area feels it (see .screen-game in style.css).
 //
-// Strategy: track the LARGEST height we've seen for the current
-// orientation and use that as the locked value. The keyboard opening
-// always SHRINKS the visual viewport, so a drop from the max is
-// treated as "keyboard opened" and ignored. A genuine change (browser
-// chrome show/hide while the keyboard is closed, or an actual
-// orientation flip) is picked up because either the width changes
-// (orientation) or, once the keyboard closes again, the height
-// returns to — or exceeds — the previous max and re-locks there.
+// window.innerHeight is the LAYOUT viewport — it does NOT shrink when
+// the on-screen keyboard opens (only visualViewport.height does), but
+// it DOES correctly reflect genuine browser-chrome changes (address
+// bar showing/hiding, entering/leaving fullscreen). That makes it the
+// right source of truth here: we want a height that's immune to the
+// keyboard but still tracks real chrome changes — which is exactly
+// the distinction visualViewport.height alone can't make, since it
+// shrinks for both cases identically. Using innerHeight avoids the
+// earlier bug where a genuine address-bar-collapse (not a keyboard
+// open) got misread as "keyboard opening" and ignored, locking in a
+// stale height that was too tall and pushed the chat input off-screen.
 function lockViewportHeight() {
-  const vv = window.visualViewport;
-  let maxHeight = (vv ? vv.height : window.innerHeight);
-  let lastWidth = (vv ? vv.width : window.innerWidth);
+  let lastAppliedHeight = window.innerHeight;
+  let lastWidth = window.innerWidth;
 
   function apply(h) {
+    lastAppliedHeight = h;
     document.documentElement.style.setProperty('--app-vh', (h / 100) + 'px');
   }
-  apply(maxHeight);
 
-  function onViewportChange() {
-    const h = vv ? vv.height : window.innerHeight;
-    const w = vv ? vv.width : window.innerWidth;
+  function measureAndApply() {
+    apply(window.innerHeight);
+  }
 
+  measureAndApply();
+
+  // The very first reading can be taken before the browser's own
+  // chrome (address bar, nav buttons) has finished settling into its
+  // resting size on page load. Re-measuring shortly after catches the
+  // settled value without waiting for an actual resize event.
+  setTimeout(measureAndApply, 300);
+
+  // window resize fires for real chrome/orientation changes; on
+  // Chrome 108+ on Android it does NOT fire just for the keyboard
+  // opening (only a visualViewport resize does), so this is naturally
+  // keyboard-safe there. As a heuristic safety net for browsers where
+  // innerHeight might still shrink for the keyboard (some iOS Safari
+  // versions): address-bar/chrome changes are small (tens of px), a
+  // keyboard is large (150px+). A same-width, big, sudden drop is
+  // almost certainly a keyboard, so it's ignored rather than adopted.
+  function onResize() {
+    const h = window.innerHeight;
+    const w = window.innerWidth;
     if (w !== lastWidth) {
-      // Orientation/window shape actually changed — reset the tracked
-      // max entirely and adopt the new height right away.
       lastWidth = w;
-      maxHeight = h;
-      apply(maxHeight);
+      apply(h);
       return;
     }
-
-    if (h > maxHeight) {
-      // Height grew back (keyboard closed, or browser chrome
-      // collapsed) — safe to trust and adopt as the new baseline.
-      maxHeight = h;
-      apply(maxHeight);
-    }
-    // else: height shrank while width stayed the same — almost
-    // certainly the keyboard opening. Deliberately do nothing, so
-    // --app-vh (and .screen-game's height) stays put.
+    const dropped = lastAppliedHeight - h;
+    if (dropped > 150) return; // looks like a keyboard — ignore
+    apply(h);
   }
-
-  if (vv) {
-    vv.addEventListener('resize', onViewportChange);
-  } else {
-    // Older browsers without visualViewport support: fall back to
-    // window resize, same grow-only logic.
-    window.addEventListener('resize', onViewportChange);
-  }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', () => setTimeout(measureAndApply, 100));
 }
 lockViewportHeight();
 
