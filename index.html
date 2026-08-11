@@ -167,6 +167,17 @@
     </symbol>
   </svg>
 
+  <!-- ================================================================
+       APP VIEWPORT
+       All game screens live inside this fixed, full-viewport wrapper.
+       This is what used to be pinned directly on <body> — moving the
+       fixed/flex/centering behavior here (instead of on body) frees up
+       body to be a normal scrolling document, so #about-guessart below
+       can sit in normal page flow instead of fighting for flex space
+       next to the game card.
+       ================================================================ -->
+  <div id="app-viewport">
+
   <!-- SCREEN 1: HOME / LOBBY -->
   <div id="screen-home" class="screen active">
     <div class="brand">
@@ -194,6 +205,8 @@
     </div>
 
     <p id="status-msg" class="status-msg"></p>
+
+    <a href="#about-guessart" class="scroll-hint">How it works ↓</a>
   </div>
 
   <!-- SCREEN 2: WAITING ROOM -->
@@ -400,6 +413,8 @@
       <button id="btn-play-again" class="btn btn-primary">Back to Home</button>
     </div>
   </div>
+
+  </div> <!-- /#app-viewport -->
 
   <!-- ================================================================
        SEO / MARKETING CONTENT

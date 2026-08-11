@@ -17,27 +17,33 @@
 html, body {
   height: 100%;
   overscroll-behavior: none;
-  /* Prevent the page itself from scrolling when the mobile keyboard
-     opens and tries to scroll a focused input into view — that scroll
-     was dragging the WHOLE body (canvas included, since .screen-game
-     sits centered inside it) up and off-screen. Locking body to fixed
-     position means the keyboard can only affect layout inside
-     .screen-game (whose height is separately pinned by --app-vh), and
-     never the page scroll position itself. */
-  position: fixed;
-  width: 100%;
-  overflow: hidden;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* #app-viewport now owns the "locked single-screen app" behavior that
+   used to live on body. Fixed + full-viewport means the mobile keyboard
+   still can't drag anything off-screen (same guarantee as before), but
+   because it's fixed to the *viewport* rather than being body itself,
+   body is free to scroll normally down into #about-guessart. */
+#app-viewport {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--bg);
   background-image: radial-gradient(circle at 50% 0%, rgba(124,92,255,0.15), transparent 60%);
+  z-index: 1;
 }
 
 .screen {
@@ -1122,13 +1128,14 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   color: var(--accent);
 }
 
-/* ================= SEO / About Section ================= */
+/* ================= SEO / About Section =================
+   Sits in normal document flow, below the fixed #app-viewport.
+   Reached by scrolling the page down past the game screen (or via
+   the "scroll for more" hint button added in the home screen). */
 #about-guessart {
   position: relative;
   width: 100%;
-  max-height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  margin-top: 100vh; /* pushes this below the fixed full-viewport app */
   background: var(--bg);
   color: var(--text);
   border-top: 1px solid var(--border);
@@ -1188,3 +1195,15 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 @media (max-width: 480px) {
   .feature-grid { grid-template-columns: 1fr; }
 }
+
+.scroll-hint {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  opacity: 0.8;
+}
+.scroll-hint:hover { opacity: 1; color: var(--primary); }
+
+html { scroll-behavior: smooth; }
