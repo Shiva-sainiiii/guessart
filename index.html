@@ -3,10 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>GuessArt</title>
+
+<!-- ===== PRIMARY SEO ===== -->
+<title>GuessArt – Free Online Drawing & Guessing Game with Friends | Skribbl.io Alternative</title>
+<meta name="description" content="Play GuessArt free with friends — a multiplayer online drawing and guessing game with private rooms, live voice chat, and meme soundboards. No download, no sign-up. A fun skribbl.io & gartic.io alternative.">
+<meta name="keywords" content="online drawing game, drawing and guessing game, skribbl.io alternative, gartic.io alternative, multiplayer guessing game, draw and guess online, play drawing puzzle with friends, private room drawing game, free draw game with voice chat">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="author" content="Shiva Saini">
+<link rel="canonical" href="https://guessart.netlify.app/">
+
+<!-- ===== OPEN GRAPH (Facebook, WhatsApp, Discord, LinkedIn) ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="GuessArt">
+<meta property="og:title" content="GuessArt – Draw, Guess & Roast Your Friends Online, Free">
+<meta property="og:description" content="Create a private room, invite friends, and play a free multiplayer drawing & guessing game with live voice chat and meme soundboards. A fun skribbl.io & gartic.io alternative — no download needed.">
+<meta property="og:url" content="https://guessart.netlify.app/">
+<meta property="og:image" content="https://guessart.netlify.app/public/images/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="GuessArt — online drawing and guessing game with friends">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== TWITTER / X CARD ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GuessArt – Draw, Guess & Roast Your Friends Online, Free">
+<meta name="twitter:description" content="Free multiplayer drawing & guessing game with private rooms, voice chat, and meme soundboards. Play instantly in your browser.">
+<meta name="twitter:image" content="https://guessart.netlify.app/public/images/og-cover.png">
+
+<!-- ===== THEME / PWA-ish polish (matches --bg color) ===== -->
+<meta name="theme-color" content="#0e1416">
+
 <link rel="icon" type="image/png" href="public/images/favicon.png">
 <link rel="apple-touch-icon" href="public/images/apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
+
+<!-- ===== STRUCTURED DATA (Google rich results) ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "GuessArt",
+  "url": "https://guessart.netlify.app/",
+  "description": "GuessArt is a free multiplayer online drawing and guessing game. Create a private room, invite friends, and take turns drawing and guessing with live voice chat and meme soundboards.",
+  "genre": ["Party Game", "Drawing Game", "Multiplayer Online Game"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Shiva Saini"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -347,6 +400,73 @@
       <button id="btn-play-again" class="btn btn-primary">Back to Home</button>
     </div>
   </div>
+
+  <!-- ================================================================
+       SEO / MARKETING CONTENT
+       Deliberately OUTSIDE the .screen system (body is position:fixed;
+       overflow:hidden for the game UI — see style.css comment at top).
+       This block gets its own scroll container so it never interferes
+       with canvas/keyboard layout, but stays in the static HTML so
+       Google, and link-preview bots, can read it immediately without
+       running JS.
+       ================================================================ -->
+  <section id="about-guessart" aria-labelledby="about-heading">
+    <div class="about-inner">
+
+      <header class="about-header">
+        <h2 id="about-heading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
+        <p class="about-lede">
+          GuessArt is a browser-based multiplayer drawing and guessing game — no download,
+          no account, no waiting room full of strangers. Create a private room, drop the
+          link in your group chat, and start drawing in seconds. It's the free
+          <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
+          built for playing with the people you actually know.
+        </p>
+      </header>
+
+      <article class="about-block" aria-labelledby="how-to-play-heading">
+        <h3 id="how-to-play-heading">How to Play GuessArt</h3>
+        <ol class="how-to-steps">
+          <li><strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.</li>
+          <li><strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.</li>
+          <li><strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.</li>
+          <li><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
+          <li><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
+        </ol>
+      </article>
+
+      <article class="about-block" aria-labelledby="features-heading">
+        <h3 id="features-heading">Why Players Choose GuessArt</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4>🔒 Private Rooms</h4>
+            <p>Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🎙️ Live Voice Chat</h4>
+            <p>Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.</p>
+          </div>
+          <div class="feature-card">
+            <h4>📢 Meme Soundboards</h4>
+            <p>Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.</p>
+          </div>
+          <div class="feature-card">
+            <h4>⚡ Instant &amp; Free</h4>
+            <p>No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.</p>
+          </div>
+        </div>
+      </article>
+
+      <footer class="about-footer">
+        <p>
+          Looking for something to replace skribbl.io or gartic.io for game night?
+          GuessArt keeps it simple: create a room, invite friends, and start drawing —
+          free, private, and built for small friend groups.
+        </p>
+      </footer>
+
+    </div>
+  </section>
 
   <!-- PeerJS library -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
