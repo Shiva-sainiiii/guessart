@@ -35,6 +35,7 @@ const AudioFX = (() => {
   const cache = {};
   let sfxMuted = false;
   let voicelinesMuted = false;
+  let audioUnlocked = false;
 
   function load(file) {
     if (!cache[file]) {
@@ -53,8 +54,14 @@ const AudioFX = (() => {
       // off the previous playback — each play gets its own instance.
       const instance = el.cloneNode();
       instance.play().catch(() => {
-        // Autoplay can be blocked until the user has interacted with the
-        // page at least once — safe to ignore, the next tap will work.
+        // Mobile browsers block audio.play() on any element that hasn't
+        // been "unlocked" by a direct user gesture yet. This is exactly
+        // why a REMOTELY-triggered voiceline (arriving over the data
+        // channel, not from your own tap) can silently fail on one
+        // side: that side's audio context was never unlocked by a
+        // local click, only the other player's was. unlockAudioContext()
+        // below fixes this by unlocking on the very first tap anywhere
+        // in the app, before any remote trigger can arrive.
       });
     } catch (e) {
       // Missing/broken audio file — fail silently so a placeholder gap
@@ -84,5 +91,27 @@ const AudioFX = (() => {
     toggleVoicelines() { voicelinesMuted = !voicelinesMuted; return !voicelinesMuted; },
     isSfxOn() { return !sfxMuted; },
     isVoicelinesOn() { return !voicelinesMuted; },
+
+    // Call once on the very first tap/touch anywhere in the app (see
+    // app.js). Silently plays and immediately pauses every cached sound
+    // at zero volume — this satisfies the browser's "user gesture"
+    // requirement for THIS audio element specifically, so later plays
+    // triggered by an incoming network message (which is not itself a
+    // user gesture) are allowed to go through instead of being blocked.
+    unlockAudioContext() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      const allFiles = [...VOICELINES.map(v => v.file), ...Object.values(SFX)];
+      allFiles.forEach(file => {
+        try {
+          const el = load(file);
+          el.volume = 0;
+          const p = el.play();
+          if (p && p.then) {
+            p.then(() => { el.pause(); el.currentTime = 0; el.volume = 1; }).catch(() => {});
+          }
+        } catch (e) { /* ignore — this file just stays locked until first real play */ }
+      });
+    },
   };
 })();

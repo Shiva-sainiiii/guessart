@@ -170,3 +170,50 @@ Voice reuses the same PeerJS `peer` object the data channel already has
 open — no second signaling connection. Whoever is the **host** places
 the outgoing `peer.call()`; the guest only listens for the incoming
 call event. This avoids both sides dialing each other simultaneously.
+
+## Phase 2.5: Icon system, favicon, and bug fixes
+
+### Visual
+- Replaced every UI-chrome emoji (mic, speaker, settings, fill, eraser,
+  undo, trash, send, close, smile, trophy) with a shared inline SVG icon
+  sprite sheet (`<symbol>` defs at the top of `index.html`, referenced
+  via `<use href="#icon-name">`). Icons pick up `currentColor`, so they
+  automatically match each button's active/inactive state.
+- Chat emoji picker and casual reactions were kept as real emoji on
+  purpose — those are meant to feel expressive/informal, unlike button
+  chrome which needed to look consistent and crisp at small sizes.
+- Added a favicon + apple-touch-icon (generated from the provided logo,
+  32×32 and 180×180) and a small logo image above the "GuessArt" title
+  on the home screen.
+- Brush-width buttons (previously ●⬤⚫ text glyphs) are now small solid
+  circles drawn in CSS, sized consistently regardless of device font.
+
+### Bugs fixed
+- **Fill/Eraser buttons appeared to do nothing.** Root cause: their
+  click handlers used `e.target` to toggle the `.active` class. Once
+  the buttons got SVG icons inside them, `e.target` became the inner
+  `<span>`/`<svg>` rather than the `<button>` itself, so the highlight
+  (and in some code paths, the mode) silently applied to the wrong
+  element. Fixed by using `e.currentTarget` everywhere in the toolbar.
+- **Flood fill could silently no-op** if it ran in the same frame as a
+  canvas resize (dimension mismatch between the CSS box and the canvas's
+  actual backing buffer). `floodFillRaw()` now checks the backing size
+  matches before reading/writing pixels, and the whole function is
+  wrapped in a try/catch so a transient failure never breaks the draw
+  loop.
+- **Voicelines played on the triggering side but not the other.** This
+  is a browser autoplay-policy quirk: a `.play()` call is only reliably
+  allowed on an audio element that's been "unlocked" by a direct user
+  gesture. The player who taps a voiceline unlocks it themselves; the
+  OTHER player receives the trigger over the data channel (not a user
+  gesture) and their browser could silently block it. Fixed by calling
+  `AudioFX.unlockAudioContext()` on the very first tap/touch anywhere in
+  the app, which primes every cached sound file before any remote
+  trigger can arrive.
+- **Canvas appeared to scroll off-screen when the keyboard opened.**
+  `body` had `display:flex` centering but no `position:fixed`, so when
+  the mobile keyboard tried to scroll a focused input into view, it
+  scrolled the whole page (canvas included) rather than just the chat
+  panel. `html, body` are now pinned with `position:fixed; overflow:hidden`,
+  so only content inside `.screen-game` (whose height is separately
+  locked via `--app-vh`) can respond to the keyboard at all.

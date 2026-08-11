@@ -104,6 +104,21 @@ let amHost = false;
 
 const COLORS = ['#1a1a22', '#e63946', '#f4a300', '#2a9d8f', '#3a86ff', '#8338ec', '#ff5c8a', '#ffffff'];
 
+// Unlock audio playback on the very first tap/touch anywhere in the app.
+// Must happen before any REMOTE voiceline trigger arrives, otherwise
+// that side's browser can silently block the .play() call since it
+// wasn't the direct result of a user gesture (see audio.js for the
+// full explanation) — this was the root cause of "voiceline plays for
+// one player but not the other".
+let audioUnlockListenerFired = false;
+function unlockAudioOnce() {
+  if (audioUnlockListenerFired) return;
+  audioUnlockListenerFired = true;
+  AudioFX.unlockAudioContext();
+}
+document.addEventListener('touchstart', unlockAudioOnce, { once: true, passive: true });
+document.addEventListener('click', unlockAudioOnce, { once: true });
+
 // ---------- HOME SCREEN: name + input validation controls button states ----------
 const nameInput = document.getElementById('input-name');
 const joinCodeInput = document.getElementById('input-join-code');
@@ -594,7 +609,10 @@ function showRoundResult(wasGuessed, word) {
   ClueSystem.stop(); // stop the rotating hint timer so it doesn't bleed into the next turn
   const state = Game.getState();
 
-  document.getElementById('result-title').textContent = wasGuessed ? '🎉 Correct!' : '⏱️ Time\'s Up!';
+  const resultTitle = document.getElementById('result-title');
+  resultTitle.innerHTML = wasGuessed
+    ? `<svg class="icon icon-inline" width="20" height="20"><use href="#icon-palette"/></svg> Correct!`
+    : `<svg class="icon icon-inline" width="20" height="20"><use href="#icon-clock"/></svg> Time's Up!`;
   document.getElementById('result-word').innerHTML = `The word was: <b>${word}</b>`;
   document.getElementById('rr-my-score').textContent = state.myScore;
   document.getElementById('rr-friend-score').textContent = state.friendScore;
@@ -633,8 +651,12 @@ function onGameEnd({ myScore, friendScore }) {
   document.getElementById('final-my-label').textContent = myName;
   document.getElementById('final-friend-label').textContent = friendName;
 
-  const title = myScore > friendScore ? '🏆 You Won!' : myScore < friendScore ? '😅 Better Luck Next Time' : '🤝 It\'s a Tie!';
-  document.getElementById('game-over-title').textContent = title;
+  const isWin = myScore > friendScore;
+  const isTie = myScore === friendScore;
+  const titleIcon = isTie ? 'icon-smile' : isWin ? 'icon-trophy' : 'icon-smile';
+  const titleText = isTie ? "It's a Tie!" : isWin ? 'You Won!' : 'Better Luck Next Time';
+  document.getElementById('game-over-title').innerHTML =
+    `<svg class="icon icon-inline" width="22" height="22"><use href="#${titleIcon}"/></svg> ${titleText}`;
 
   if (myScore > friendScore) AudioFX.playWin();
   else if (myScore < friendScore) AudioFX.playLose();
@@ -680,7 +702,12 @@ function setupToolbar() {
   Object.keys(widths).forEach(key => {
     document.getElementById(`btn-width-${key}`).addEventListener('click', (e) => {
       document.querySelectorAll('.width-control .btn-icon').forEach(b => b.classList.remove('active'));
-      e.target.classList.add('active');
+      // currentTarget (not target) — a click on the inner <span class="dot-preview">
+      // or an <svg><use> icon bubbles up with e.target set to that inner
+      // element, not the <button> itself. Using target here would silently
+      // toggle .active on the wrong node and the button would never
+      // visually show as selected.
+      e.currentTarget.classList.add('active');
       DrawCanvas.setWidth(widths[key]);
     });
   });
@@ -690,7 +717,7 @@ function setupToolbar() {
     if (!Game.isDrawerTurn()) return;
     const nowFilling = !DrawCanvas.isFillMode();
     DrawCanvas.setFillMode(nowFilling);
-    e.target.classList.toggle('active', nowFilling);
+    e.currentTarget.classList.toggle('active', nowFilling);
     document.getElementById('btn-eraser').classList.remove('active'); // fill and eraser are mutually exclusive
   });
 
@@ -698,7 +725,7 @@ function setupToolbar() {
     if (!Game.isDrawerTurn()) return;
     const nowErasing = !DrawCanvas.isEraser();
     DrawCanvas.setEraser(nowErasing);
-    e.target.classList.toggle('active', nowErasing);
+    e.currentTarget.classList.toggle('active', nowErasing);
     document.getElementById('btn-fill').classList.remove('active'); // fill and eraser are mutually exclusive
   });
 
@@ -775,6 +802,15 @@ function setupVoicelineMenu() {
 }
 
 // ---------- VOICE — always-on, Mic + Speaker are independent toggles ----------
+// Swaps the referenced <symbol> inside a button's inline <svg><use>,
+// e.g. flipping the mic icon between "mic" and "mic-off". Centralized
+// here since several places (topbar buttons + their settings-panel
+// mirrors) need to stay in sync with the same icon swap.
+function setButtonIcon(buttonEl, iconId) {
+  const use = buttonEl.querySelector('use');
+  if (use) use.setAttribute('href', `#${iconId}`);
+}
+
 let voiceCallHandlersRegistered = false;
 function setupVoiceCall() {
   const micBtn = document.getElementById('btn-mic-toggle');
@@ -812,14 +848,14 @@ function setupVoiceCall() {
   micBtn.addEventListener('click', () => {
     const on = VoiceCall.toggleMic();
     micBtn.classList.toggle('on', on);
-    micBtn.textContent = on ? '🎤' : '🔇';
+    setButtonIcon(micBtn, on ? 'icon-mic' : 'icon-mic-off');
     syncSettingsToggle('settings-mic-toggle', on);
   });
 
   speakerBtn.addEventListener('click', () => {
     const on = VoiceCall.toggleSpeaker();
     speakerBtn.classList.toggle('on', on);
-    speakerBtn.textContent = on ? '🔊' : '🔈';
+    setButtonIcon(speakerBtn, on ? 'icon-speaker' : 'icon-speaker-off');
     syncSettingsToggle('settings-speaker-toggle', on);
   });
 }
@@ -868,7 +904,7 @@ function setupSettingsPanel() {
     e.currentTarget.classList.toggle('on', on);
     const micBtn = document.getElementById('btn-mic-toggle');
     micBtn.classList.toggle('on', on);
-    micBtn.textContent = on ? '🎤' : '🔇';
+    setButtonIcon(micBtn, on ? 'icon-mic' : 'icon-mic-off');
   });
 
   document.getElementById('settings-speaker-toggle').addEventListener('click', (e) => {
@@ -876,7 +912,7 @@ function setupSettingsPanel() {
     e.currentTarget.classList.toggle('on', on);
     const speakerBtn = document.getElementById('btn-speaker-toggle');
     speakerBtn.classList.toggle('on', on);
-    speakerBtn.textContent = on ? '🔊' : '🔈';
+    setButtonIcon(speakerBtn, on ? 'icon-speaker' : 'icon-speaker-off');
   });
 
   document.getElementById('settings-sfx-toggle').addEventListener('click', (e) => {

@@ -17,6 +17,16 @@
 html, body {
   height: 100%;
   overscroll-behavior: none;
+  /* Prevent the page itself from scrolling when the mobile keyboard
+     opens and tries to scroll a focused input into view — that scroll
+     was dragging the WHOLE body (canvas included, since .screen-game
+     sits centered inside it) up and off-screen. Locking body to fixed
+     position means the keyboard can only affect layout inside
+     .screen-game (whose height is separately pinned by --app-vh), and
+     never the page scroll position itself. */
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -26,8 +36,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background-image: radial-gradient(circle at 50% 0%, rgba(124,92,255,0.15), transparent 60%);
 }
@@ -49,6 +57,12 @@ body {
 }
 
 .brand { text-align: center; margin-bottom: 32px; }
+.brand-logo {
+  width: 76px;
+  height: 76px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 16px rgba(45,212,167,0.25));
+}
 .brand h1 {
   font-size: 36px;
   font-weight: 800;
@@ -740,7 +754,37 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   cursor: pointer;
   flex-shrink: 0;
 }
-.btn-icon.active { background: var(--primary); border-color: var(--primary); }
+.btn-icon.active { background: var(--primary); border-color: var(--primary); color: #062019; }
+
+/* Shared sizing for every inline SVG icon (<use> sprite references).
+   stroke uses currentColor, so an icon automatically matches whatever
+   text/icon color its parent button has — including on hover/active
+   states — without needing per-icon color overrides anywhere. */
+.icon {
+  display: block;
+  flex-shrink: 0;
+  color: currentColor;
+}
+/* Variant for icons sitting inline next to text (headings, banners) —
+   vertical-align keeps them baseline-aligned with the surrounding text
+   instead of the block default that .icon uses for standalone buttons. */
+.icon-inline {
+  display: inline-block;
+  vertical-align: -4px;
+  margin-right: 2px;
+}
+
+/* Brush-width buttons used to be literal ●⬤⚫ emoji glyphs (inconsistent
+   size across devices/fonts); now a small solid circle drawn in CSS so
+   it scales cleanly and reads clearly as "thin/medium/thick" at a glance. */
+.width-dot .dot-preview {
+  border-radius: 50%;
+  background: currentColor;
+  display: block;
+}
+.dot-sm { width: 5px; height: 5px; }
+.dot-md { width: 9px; height: 9px; }
+.dot-lg { width: 14px; height: 14px; }
 
 /* ===== VOICELINE FAB + radial pie menu ===== */
 .voiceline-fab {

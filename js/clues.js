@@ -26,8 +26,17 @@ const ClueSystem = (() => {
     // Small fade so each new clue feels like a fresh hint, not a jump-cut.
     el.classList.remove('clue-fade-in');
     void el.offsetWidth; // restart the CSS animation
-    el.textContent = `💡 ${text}`;
+    el.innerHTML = `<svg class="icon icon-inline" width="14" height="14"><use href="#icon-bulb"/></svg> ${escapeHtmlClue(text)}`;
     el.classList.add('clue-fade-in');
+  }
+
+  // Clues are hand-authored (not user input), but escaping defensively
+  // costs nothing and protects against any future clue text containing
+  // special characters from breaking the innerHTML render.
+  function escapeHtmlClue(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   return {

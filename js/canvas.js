@@ -57,76 +57,78 @@ const DrawCanvas = (() => {
   // Classic 4-directional flood fill on the canvas's raw pixel buffer.
   // x,y come in as normalized (0-1) coordinates, same as strokes, so fills
   // sync and replay identically regardless of each player's canvas size.
+  //
+  // Wrapped defensively: getImageData/putImageData can throw (e.g. a
+  // zero-size canvas mid-resize, or a transient "not enough memory" on
+  // very old phones) and a silent failure here is much better than
+  // taking down the whole draw loop.
   function floodFillRaw(nx, ny, colorHex) {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    if (w === 0 || h === 0) return;
+    try {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(rect.width * dpr);
+      const h = Math.round(rect.height * dpr);
+      if (w === 0 || h === 0 || w !== canvas.width || h !== canvas.height) {
+        // Canvas backing size doesn't match what we're about to read —
+        // this happens for a frame or two right around a resize. Bail
+        // rather than read/write pixels at the wrong dimensions, which
+        // would fill the wrong region (or silently no-op, which is
+        // exactly the "fill does nothing" symptom).
+        return;
+      }
 
-    const startX = Math.floor(nx * w);
-    const startY = Math.floor(ny * h);
-    if (startX < 0 || startY < 0 || startX >= w || startY >= h) return;
+      const startX = Math.floor(nx * w);
+      const startY = Math.floor(ny * h);
+      if (startX < 0 || startY < 0 || startX >= w || startY >= h) return;
 
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-    const [fr, fg, fb, fa] = hexToRgba(colorHex);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      const [fr, fg, fb, fa] = hexToRgba(colorHex);
 
-    const startIdx = (startY * w + startX) * 4;
-    const startR = data[startIdx], startG = data[startIdx + 1], startB = data[startIdx + 2], startA = data[startIdx + 3];
+      const startIdx = (startY * w + startX) * 4;
+      const startR = data[startIdx], startG = data[startIdx + 1], startB = data[startIdx + 2], startA = data[startIdx + 3];
 
-    // Already filled with this exact color — nothing to do.
-    if (startR === fr && startG === fg && startB === fb && startA === fa) return;
+      // Already filled with this exact color — nothing to do.
+      if (startR === fr && startG === fg && startB === fb && startA === fa) return;
 
-    // Tolerance-based match instead of exact equality. A hand-drawn
-    // stroke boundary is anti-aliased — its edge pixels are partially
-    // blended between the line color and the background, not a hard
-    // line — so exact-match flood fill either leaks straight through
-    // those semi-transparent edge pixels or (on a fresh transparent
-    // canvas) refuses to spread at all once it hits the first
-    // slightly-different pixel. A small per-channel tolerance treats
-    // those near-identical edge pixels as "still background" so fills
-    // stop at the visible boundary instead of leaking past it or
-    // stalling immediately.
-    const TOLERANCE = 32;
-    const matches = (idx) =>
-      Math.abs(data[idx] - startR) <= TOLERANCE &&
-      Math.abs(data[idx + 1] - startG) <= TOLERANCE &&
-      Math.abs(data[idx + 2] - startB) <= TOLERANCE &&
-      Math.abs(data[idx + 3] - startA) <= TOLERANCE;
+      const matches = (idx) =>
+        data[idx] === startR && data[idx + 1] === startG && data[idx + 2] === startB && data[idx + 3] === startA;
 
-    // Iterative stack-based fill (recursion would blow the call stack on
-    // large canvases). Scanline variant keeps this fast enough for a
-    // typical phone-sized drawing area.
-    const stack = [[startX, startY]];
-    while (stack.length) {
-      const [x, y] = stack.pop();
-      let leftX = x;
-      let idx = (y * w + leftX) * 4;
-      while (leftX >= 0 && matches(idx)) { leftX--; idx -= 4; }
-      leftX++;
+      // Iterative stack-based fill (recursion would blow the call stack on
+      // large canvases). Scanline variant keeps this fast enough for a
+      // typical phone-sized drawing area.
+      const stack = [[startX, startY]];
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        let leftX = x;
+        let idx = (y * w + leftX) * 4;
+        while (leftX >= 0 && matches(idx)) { leftX--; idx -= 4; }
+        leftX++;
 
-      let rightX = x;
-      idx = (y * w + rightX) * 4;
-      while (rightX < w && matches(idx)) { rightX++; idx += 4; }
-      rightX--;
+        let rightX = x;
+        idx = (y * w + rightX) * 4;
+        while (rightX < w && matches(idx)) { rightX++; idx += 4; }
+        rightX--;
 
-      for (let i = leftX; i <= rightX; i++) {
-        const fillIdx = (y * w + i) * 4;
-        data[fillIdx] = fr; data[fillIdx + 1] = fg; data[fillIdx + 2] = fb; data[fillIdx + 3] = fa;
+        for (let i = leftX; i <= rightX; i++) {
+          const fillIdx = (y * w + i) * 4;
+          data[fillIdx] = fr; data[fillIdx + 1] = fg; data[fillIdx + 2] = fb; data[fillIdx + 3] = fa;
 
-        if (y > 0) {
-          const upIdx = ((y - 1) * w + i) * 4;
-          if (matches(upIdx)) stack.push([i, y - 1]);
-        }
-        if (y < h - 1) {
-          const downIdx = ((y + 1) * w + i) * 4;
-          if (matches(downIdx)) stack.push([i, y + 1]);
+          if (y > 0) {
+            const upIdx = ((y - 1) * w + i) * 4;
+            if (matches(upIdx)) stack.push([i, y - 1]);
+          }
+          if (y < h - 1) {
+            const downIdx = ((y + 1) * w + i) * 4;
+            if (matches(downIdx)) stack.push([i, y + 1]);
+          }
         }
       }
-    }
 
-    ctx.putImageData(imgData, 0, 0);
+      ctx.putImageData(imgData, 0, 0);
+    } catch (err) {
+      console.warn('[DrawCanvas] flood fill failed:', err);
+    }
   }
 
   function resizeCanvas() {
@@ -235,23 +237,13 @@ const DrawCanvas = (() => {
       resizeCanvas();
       requestAnimationFrame(resizeCanvas);
 
-      // Debounce resize (mobile keyboard open/close fires viewport
-      // events a lot) so we don't thrash the canvas mid-typing. Since
-      // .screen-game's height is now locked by lockViewportHeight()
-      // in app.js, the canvas's actual layout box no longer changes
-      // just because the keyboard opened — this listener mainly
-      // exists to catch a genuine orientation change or window resize
-      // (desktop browser testing), where re-measuring is correct.
+      // Debounce window resize (mobile keyboard open/close fires this a
+      // lot) so we don't thrash the canvas mid-typing.
       let resizeTimer = null;
-      const scheduleResize = () => {
+      window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(resizeCanvas, 200);
-      };
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', scheduleResize);
-      } else {
-        window.addEventListener('resize', scheduleResize);
-      }
+      });
 
       canvas.addEventListener('mousedown', handleStart);
       canvas.addEventListener('mousemove', handleMove);
