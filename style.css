@@ -66,10 +66,20 @@ body {
    Other screens don't get this because their content never exceeds
    the fixed viewport. */
 #screen-home {
+  justify-content: flex-start;
+}
+
+/* Scroll only kicks in once the <details> block is actually opened —
+   in the default closed state, #screen-home never scrolls at all, so
+   there's no chance of the SEO content peeking into view or the page
+   drifting on its own. :has() covers modern browsers; .has-details-open
+   is a JS-driven class (see the 'toggle' listener in app.js) for
+   browsers without :has() support. */
+#screen-home:has(.about-details[open]),
+#screen-home.has-details-open {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-height: 100%;
-  justify-content: flex-start;
 }
 
 @keyframes fadeIn {

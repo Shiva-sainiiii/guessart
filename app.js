@@ -108,6 +108,18 @@ function showScreen(name) {
   screens[name].classList.add('active');
 }
 
+// Fallback for browsers without :has() support (the CSS rule
+// `#screen-home:has(.about-details[open])` handles this natively in
+// modern browsers, but this keeps older ones working too): toggle a
+// class on #screen-home directly whenever the SEO <details> block is
+// opened or closed, so scrolling only turns on while it's actually open.
+const aboutDetails = document.querySelector('.about-details');
+if (aboutDetails) {
+  aboutDetails.addEventListener('toggle', () => {
+    document.getElementById('screen-home').classList.toggle('has-details-open', aboutDetails.open);
+  });
+}
+
 const statusMsg = document.getElementById('status-msg');
 function setStatus(msg, isError = false) {
   statusMsg.textContent = msg;
