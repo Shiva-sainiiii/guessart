@@ -171,10 +171,8 @@
        APP VIEWPORT
        All game screens live inside this fixed, full-viewport wrapper.
        This is what used to be pinned directly on <body> — moving the
-       fixed/flex/centering behavior here (instead of on body) frees up
-       body to be a normal scrolling document, so #about-guessart below
-       can sit in normal page flow instead of fighting for flex space
-       next to the game card.
+       fixed/flex/centering behavior here (instead of on body) keeps
+       the game locked to a single screen exactly as before.
        ================================================================ -->
   <div id="app-viewport">
 
@@ -206,7 +204,75 @@
 
     <p id="status-msg" class="status-msg"></p>
 
-    <a href="#about-guessart" class="scroll-hint">How it works ↓</a>
+    <!-- ================================================================
+         SEO / MARKETING CONTENT
+         Lives INSIDE #screen-home (not outside/below the fixed app), as
+         a native <details> element. This guarantees it's reachable no
+         matter what viewport-height math is happening elsewhere: closed
+         by default so the primary create/join UI stays exactly as
+         designed, but the full text is still present in the raw HTML —
+         not display:none, not JS-injected — so Google (and anyone who
+         taps to expand it) gets the complete content. <details> content
+         is indexed by Google even while collapsed.
+         ================================================================ -->
+    <details class="about-details">
+      <summary class="about-summary">How it works &amp; what's inside ↓</summary>
+      <div class="about-inner">
+
+        <header class="about-header">
+          <h2 id="about-heading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
+          <p class="about-lede">
+            GuessArt is a browser-based multiplayer drawing and guessing game — no download,
+            no account, no waiting room full of strangers. Create a private room, drop the
+            link in your group chat, and start drawing in seconds. It's the free
+            <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
+            built for playing with the people you actually know.
+          </p>
+        </header>
+
+        <article class="about-block" aria-labelledby="how-to-play-heading">
+          <h3 id="how-to-play-heading">How to Play GuessArt</h3>
+          <ol class="how-to-steps">
+            <li><strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.</li>
+            <li><strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.</li>
+            <li><strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.</li>
+            <li><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
+            <li><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
+          </ol>
+        </article>
+
+        <article class="about-block" aria-labelledby="features-heading">
+          <h3 id="features-heading">Why Players Choose GuessArt</h3>
+          <div class="feature-grid">
+            <div class="feature-card">
+              <h4>🔒 Private Rooms</h4>
+              <p>Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.</p>
+            </div>
+            <div class="feature-card">
+              <h4>🎙️ Live Voice Chat</h4>
+              <p>Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.</p>
+            </div>
+            <div class="feature-card">
+              <h4>📢 Meme Soundboards</h4>
+              <p>Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.</p>
+            </div>
+            <div class="feature-card">
+              <h4>⚡ Instant &amp; Free</h4>
+              <p>No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.</p>
+            </div>
+          </div>
+        </article>
+
+        <footer class="about-footer">
+          <p>
+            Looking for something to replace skribbl.io or gartic.io for game night?
+            GuessArt keeps it simple: create a room, invite friends, and start drawing —
+            free, private, and built for small friend groups.
+          </p>
+        </footer>
+
+      </div>
+    </details>
   </div>
 
   <!-- SCREEN 2: WAITING ROOM -->
@@ -415,73 +481,6 @@
   </div>
 
   </div> <!-- /#app-viewport -->
-
-  <!-- ================================================================
-       SEO / MARKETING CONTENT
-       Deliberately OUTSIDE the .screen system (body is position:fixed;
-       overflow:hidden for the game UI — see style.css comment at top).
-       This block gets its own scroll container so it never interferes
-       with canvas/keyboard layout, but stays in the static HTML so
-       Google, and link-preview bots, can read it immediately without
-       running JS.
-       ================================================================ -->
-  <section id="about-guessart" aria-labelledby="about-heading">
-    <div class="about-inner">
-
-      <header class="about-header">
-        <h2 id="about-heading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
-        <p class="about-lede">
-          GuessArt is a browser-based multiplayer drawing and guessing game — no download,
-          no account, no waiting room full of strangers. Create a private room, drop the
-          link in your group chat, and start drawing in seconds. It's the free
-          <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
-          built for playing with the people you actually know.
-        </p>
-      </header>
-
-      <article class="about-block" aria-labelledby="how-to-play-heading">
-        <h3 id="how-to-play-heading">How to Play GuessArt</h3>
-        <ol class="how-to-steps">
-          <li><strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.</li>
-          <li><strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.</li>
-          <li><strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.</li>
-          <li><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
-          <li><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
-        </ol>
-      </article>
-
-      <article class="about-block" aria-labelledby="features-heading">
-        <h3 id="features-heading">Why Players Choose GuessArt</h3>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h4>🔒 Private Rooms</h4>
-            <p>Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.</p>
-          </div>
-          <div class="feature-card">
-            <h4>🎙️ Live Voice Chat</h4>
-            <p>Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.</p>
-          </div>
-          <div class="feature-card">
-            <h4>📢 Meme Soundboards</h4>
-            <p>Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.</p>
-          </div>
-          <div class="feature-card">
-            <h4>⚡ Instant &amp; Free</h4>
-            <p>No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.</p>
-          </div>
-        </div>
-      </article>
-
-      <footer class="about-footer">
-        <p>
-          Looking for something to replace skribbl.io or gartic.io for game night?
-          GuessArt keeps it simple: create a room, invite friends, and start drawing —
-          free, private, and built for small friend groups.
-        </p>
-      </footer>
-
-    </div>
-  </section>
 
   <!-- PeerJS library -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
