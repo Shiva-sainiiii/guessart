@@ -26,16 +26,19 @@ body {
 }
 
 /* #app-viewport now owns the "locked single-screen app" behavior that
-   used to live on body. Fixed + full-viewport means the mobile keyboard
-   still can't drag anything off-screen (same guarantee as before), but
-   because it's fixed to the *viewport* rather than being body itself,
-   body is free to scroll normally down into #about-guessart. */
+   used to live on body. Height is locked to --app-vh (set once by
+   lockViewportHeight() in app.js, and only re-set on a genuine
+   orientation/resize — never when the keyboard opens) instead of a
+   raw 100%. Fixed + full-viewport means the mobile keyboard still
+   can't drag anything off-screen, and because it's fixed to the
+   *viewport* rather than being body itself, body is free to scroll
+   normally down into #about-guessart. */
 #app-viewport {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(var(--app-vh, 1vh) * 100);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -399,11 +402,15 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 
 /* ===== GAME SCREEN =====
    Three stacked panels, each a fixed % of the total screen height:
-     20% top    — .game-panel-top    (topbar, voice strip, word/hints/clue)
-     40% mid    — .game-panel-mid    (canvas + drawing toolbar)
-     40% bottom — .game-panel-bottom (chat + its input row)
+     16% top    — .game-panel-top    (topbar, voice strip, word/hints/clue)
+     50% mid    — .game-panel-mid    (canvas + drawing toolbar)
+     34% bottom — .game-panel-bottom (chat + its input row)
    The reconnect banner floats above this and doesn't take a height
-   share of its own. */
+   share of its own. Canvas gets the largest share since it's the
+   actual gameplay surface; header is kept just tall enough for the
+   score chips/timer/word banner/hints to stay readable without
+   crowding — going much below 16% clips the hint-tiles + clue-line
+   combo on the guesser's view. */
 .screen-game {
   position: relative;
   max-width: 100%;
@@ -433,22 +440,22 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 }
 
 .game-panel-top {
-  height: 20%;
-  flex: 0 0 20%;
+  height: 16%;
+  flex: 0 0 16%;
   gap: 2px;
   justify-content: center;
   overflow: hidden;
 }
 
 .game-panel-mid {
-  height: 40%;
-  flex: 0 0 40%;
+  height: 50%;
+  flex: 0 0 50%;
   gap: 6px;
 }
 
 .game-panel-bottom {
-  height: 40%;
-  flex: 0 0 40%;
+  height: 34%;
+  flex: 0 0 34%;
 }
 
 /* Topbar: two player identity chips (left = me, right = friend) flank a
@@ -518,10 +525,12 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   border-radius: 8px;
   border: none;
   background: transparent;
+  color: var(--text-dim);
   font-size: 16px;
   flex-shrink: 0;
   cursor: pointer;
 }
+.settings-gear-btn:hover { color: var(--text); }
 
 /* Presence dot — green pulse when the peer's WebRTC connection is
    live, gray/static once it drops (see ConnectionMonitor in app.js). */
@@ -600,9 +609,13 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   font-size: 15px;
   cursor: pointer;
   flex-shrink: 0;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.voice-icon-btn.on { border-color: var(--primary); background: rgba(45,212,167,0.12); }
-.voice-icon-btn:not(.on) { border-color: var(--accent); background: rgba(255,122,92,0.1); }
+.voice-icon-btn.on { border-color: var(--primary); background: rgba(45,212,167,0.12); color: var(--primary); }
+.voice-icon-btn:not(.on) { border-color: var(--accent); background: rgba(255,122,92,0.1); color: var(--accent); }
 .voice-icon-btn:disabled { opacity: 0.4; }
 .voice-status-text {
   font-size: 11px;
@@ -766,6 +779,14 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
    stroke uses currentColor, so an icon automatically matches whatever
    text/icon color its parent button has — including on hover/active
    states — without needing per-icon color overrides anywhere. */
+/* Safety net: any plain <button> containing an .icon SVG inherits a
+   visible theme color by default, even if that specific button class
+   forgets to set one. Browsers apply their own default button text
+   color otherwise, which reads near-invisible on this dark palette. */
+button {
+  color: var(--text);
+}
+
 .icon {
   display: block;
   flex-shrink: 0;
@@ -1135,10 +1156,17 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 #about-guessart {
   position: relative;
   width: 100%;
-  margin-top: 100vh; /* pushes this below the fixed full-viewport app */
   background: var(--bg);
   color: var(--text);
   border-top: 1px solid var(--border);
+}
+@supports (height: 100dvh) {
+  #about-guessart {
+    margin-top: 100dvh; /* fallback for the brief instant before app.js runs; overridden by the rule below once --app-vh is set */
+  }
+}
+#about-guessart {
+  margin-top: calc(var(--app-vh, 1vh) * 100); /* matches #app-viewport's own height exactly once JS has run, so this starts right where the fixed app ends */
 }
 .about-inner {
   max-width: 720px;

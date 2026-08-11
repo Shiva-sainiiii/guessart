@@ -87,6 +87,22 @@ function lockViewportHeight() {
 }
 lockViewportHeight();
 
+// Requests fullscreen (hides the browser's URL bar/chrome on supporting
+// mobile browsers, giving a bit more usable screen height) when called
+// from inside a user gesture handler — Chrome/Android and most other
+// mobile browsers require that; a bare page-load call is silently
+// blocked by the browser, which is why this is invoked from the
+// Create/Join button click handlers instead of on page load. iOS Safari
+// doesn't support the Fullscreen API at all — the catch below means it
+// just does nothing there instead of throwing.
+function requestAppFullscreen() {
+  const el = document.documentElement;
+  const request = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (request) {
+    try { request.call(el).catch(() => {}); } catch (e) { /* unsupported or blocked — ignore */ }
+  }
+}
+
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   screens[name].classList.add('active');
@@ -267,6 +283,7 @@ refreshHomeButtonStates();
 
 createBtn.addEventListener('click', () => {
   if (createBtn.disabled) { nudgeNameField(); return; }
+  requestAppFullscreen();
   myName = nameInput.value.trim();
   amHost = true;
   Connection.createRoom(
@@ -292,6 +309,7 @@ joinBtn.addEventListener('click', () => {
     if (nameInput.value.trim().length === 0) nudgeNameField();
     return;
   }
+  requestAppFullscreen();
   myName = nameInput.value.trim();
   const code = joinCodeInput.value.trim().toUpperCase();
   amHost = false;
