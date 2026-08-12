@@ -455,6 +455,17 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   max-width: 100%;
   padding: 8px;
   padding-top: calc(8px + env(safe-area-inset-top));
+  /* Since the keyboard OVERLAYS the page instead of resizing it (see
+     interactive-widget=overlays-content), this screen's bottom edge
+     stays physically at the real screen bottom — right behind the
+     keyboard — unless we push it up ourselves. --keyboard-inset (kept
+     live by trackKeyboardOffset() in app.js) is exactly the keyboard's
+     current height, so this padding lifts the whole column (and
+     therefore the chat panel sitting at its bottom) to end just above
+     the keyboard rather than disappearing underneath it. 0 when the
+     keyboard is closed, so this never affects normal layout. */
+  padding-bottom: calc(8px + var(--keyboard-inset, 0px));
+  transition: padding-bottom 0.18s ease;
   flex-direction: column;
   justify-content: flex-start;
   gap: 6px;
@@ -484,28 +495,42 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   gap: 2px;
   justify-content: center;
   overflow: hidden;
+  transition: flex-basis 0.18s ease, opacity 0.15s ease;
 }
 
 .game-panel-mid {
   height: 50%;
   flex: 0 0 50%;
   gap: 6px;
+  transition: flex-basis 0.18s ease;
 }
 
 .game-panel-bottom {
   height: 34%;
   flex: 0 0 34%;
-  /* When the keyboard opens, it overlays the page (see
-     interactive-widget=overlays-content) rather than resizing anything,
-     so nothing here moves automatically. This bottom-padding — kept
-     live by trackKeyboardOffset() in app.js via --keyboard-inset — eats
-     into the SAME 34% share this panel already had, pushing the chat
-     log + input row up above the keyboard from the inside. The header
-     and canvas panels above are completely unaffected, since they
-     don't reference --keyboard-inset at all. */
-  padding-bottom: var(--keyboard-inset, 0px);
-  transition: padding-bottom 0.15s ease;
+  transition: flex-basis 0.18s ease;
   box-sizing: border-box;
+}
+
+/* Keyboard-open layout: the header panel slides away entirely instead
+   of just shrinking, handing its whole share of the screen to the
+   canvas — this is the "header hides upward, canvas takes its place"
+   behavior. The chat panel switches from a % share to a fixed pixel
+   height so the input row AND the most recent message stay visible
+   above the keyboard, rather than just a sliver of the input row.
+   Driven by --keyboard-inset (kept live by trackKeyboardOffset() in
+   app.js) via the .keyboard-open class on <body>; everything reverts
+   the instant the keyboard closes and the class comes off. */
+body.keyboard-open .game-panel-top {
+  flex: 0 0 0%;
+  opacity: 0;
+  pointer-events: none;
+}
+body.keyboard-open .game-panel-mid {
+  flex: 1 1 auto;
+}
+body.keyboard-open .game-panel-bottom {
+  flex: 0 0 168px;
 }
 
 /* Topbar: two player identity chips (left = me, right = friend) flank a

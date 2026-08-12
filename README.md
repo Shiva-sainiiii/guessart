@@ -288,3 +288,22 @@ rule — `.screen:not(.active) { display: none !important; }` — so any
 future rule that accidentally sets `display` on a screen without gating
 it behind `.active` gets overridden rather than silently causing the
 same class of bug again.
+
+## Phase 2.8: Header hides on keyboard open, chat rises above it
+
+- **Header now fully hides (not shrinks) when the keyboard opens.**
+  `.game-panel-top` collapses to `flex: 0 0 0%` with a fade-out, handing
+  its entire share of the screen to the canvas panel (`flex: 1 1 auto`).
+  Reverts instantly the moment the keyboard closes (`.keyboard-open`
+  class comes off `<body>`, driven by `--keyboard-inset` from
+  `trackKeyboardOffset()` in app.js).
+- **Canvas takes the freed space** and stays fully visible the whole time.
+- **Chat panel switches to a fixed 168px height** while the keyboard is
+  open (rather than its normal 34% share) — enough room for the input
+  row plus the last message or two, so you can see recent context and
+  what you're typing without it being just a bare input strip.
+- **The whole game screen gets keyboard-aware bottom padding**
+  (`padding-bottom: calc(8px + var(--keyboard-inset))` on `.screen-game`)
+  so the chat panel's bottom edge — and therefore the input row — ends
+  just above the keyboard instead of sliding underneath it, since the
+  keyboard overlays the page rather than resizing it.
