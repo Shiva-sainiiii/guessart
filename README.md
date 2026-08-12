@@ -217,3 +217,53 @@ call event. This avoids both sides dialing each other simultaneously.
   panel. `html, body` are now pinned with `position:fixed; overflow:hidden`,
   so only content inside `.screen-game` (whose height is separately
   locked via `--app-vh`) can respond to the keyboard at all.
+
+## Phase 2.6: Real fix for the keyboard/canvas bug, icon contrast, panel ratios
+
+### The actual root cause of the keyboard bug
+Every previous attempt patched symptoms (locking body scroll, locking
+`.screen-game`'s height from JS) but the real fix was one line in the
+viewport meta tag: `interactive-widget=overlays-content`. Without it,
+mobile browsers treat the on-screen keyboard as something that RESIZES
+the page's layout viewport — which is what kept dragging the header and
+canvas upward no matter how many heights we pinned in CSS, since
+`window.innerHeight` itself was shrinking. With `overlays-content` set,
+the keyboard now floats ON TOP of the page instead, and the layout
+viewport (and therefore every height derived from it) never changes
+when the keyboard opens or closes.
+
+With that in place:
+- `#app-viewport` stays completely still — header and canvas never move.
+- Only `.game-panel-bottom` (the chat section) reacts to the keyboard,
+  via a new `--keyboard-inset` CSS variable kept live by
+  `trackKeyboardOffset()` in app.js (reads `visualViewport`, which still
+  correctly reports keyboard height even though layout doesn't shrink).
+  That padding eats into the chat panel's own existing height budget —
+  the message log shrinks, the input row rises to sit just above the
+  keyboard, and neither the header nor the canvas panel are touched at
+  all, exactly as requested.
+- The voiceline FAB also rises with `--keyboard-inset` so it stays
+  pinned just above the input row instead of getting buried.
+
+### Panel ratios
+Rebalanced to give the canvas more room: header 15% / canvas 52% / chat
+33% (previously closer to an even 20/40/40 split). Topbar, voice strip,
+word banner, and hint tiles were all tightened up (smaller icons, less
+padding) so they still fit comfortably in the shorter header.
+
+### Icon contrast
+Found several icon buttons (topbar settings gear, voice strip mic/
+speaker) that never set an explicit `color`, so they fell back to the
+browser's default button text color instead of the app's `--text`
+variable — invisible against a dark background. All icon buttons now
+explicitly set `color`. Toolbar button borders were also bumped to a
+translucent white so the buttons themselves are visible against the
+similarly-dark card background, not just the icons inside them.
+
+### Fullscreen
+`requestAppFullscreen()` (hides the browser's URL bar on supporting
+mobile browsers) was already wired to fire from the Create/Join button
+taps — this satisfies the browser's user-gesture requirement for the
+Fullscreen API. iOS Safari doesn't implement the Fullscreen API at all,
+so this has no visible effect there (a platform limitation, not a bug) —
+Android Chrome and most other mobile browsers do support it.

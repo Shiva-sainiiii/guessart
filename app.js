@@ -35,62 +35,48 @@ const screens = {
 // resizes the topbar/canvas/toolbar — only the chat panel's own
 // scroll area feels it (see .screen-game in style.css).
 //
-// window.innerHeight is the LAYOUT viewport — it does NOT shrink when
-// the on-screen keyboard opens (only visualViewport.height does), but
-// it DOES correctly reflect genuine browser-chrome changes (address
-// bar showing/hiding, entering/leaving fullscreen). That makes it the
-// right source of truth here: we want a height that's immune to the
-// keyboard but still tracks real chrome changes — which is exactly
-// the distinction visualViewport.height alone can't make, since it
-// shrinks for both cases identically. Using innerHeight avoids the
-// earlier bug where a genuine address-bar-collapse (not a keyboard
-// open) got misread as "keyboard opening" and ignored, locking in a
-// stale height that was too tall and pushed the chat input off-screen.
+// With `interactive-widget=overlays-content` set in the viewport meta
+// tag (see index.html), the on-screen keyboard opening no longer
+// changes window.innerHeight AT ALL on modern Android/Chrome and iOS
+// Safari — the keyboard simply overlays on top of the page instead of
+// shrinking the layout. That's what makes the rest of this app's fixed
+// heights (--app-vh, .screen-game) stable: they're set once from a
+// value that genuinely never moves for keyboard opens, only for real
+// chrome/orientation changes.
 function lockViewportHeight() {
-  let lastAppliedHeight = window.innerHeight;
-  let lastWidth = window.innerWidth;
-
-  function apply(h) {
-    lastAppliedHeight = h;
-    document.documentElement.style.setProperty('--app-vh', (h / 100) + 'px');
+  function apply() {
+    document.documentElement.style.setProperty('--app-vh', (window.innerHeight / 100) + 'px');
   }
-
-  function measureAndApply() {
-    apply(window.innerHeight);
-  }
-
-  measureAndApply();
-
-  // The very first reading can be taken before the browser's own
-  // chrome (address bar, nav buttons) has finished settling into its
-  // resting size on page load. Re-measuring shortly after catches the
-  // settled value without waiting for an actual resize event.
-  setTimeout(measureAndApply, 300);
-
-  // window resize fires for real chrome/orientation changes; on
-  // Chrome 108+ on Android it does NOT fire just for the keyboard
-  // opening (only a visualViewport resize does), so this is naturally
-  // keyboard-safe there. As a heuristic safety net for browsers where
-  // innerHeight might still shrink for the keyboard (some iOS Safari
-  // versions): address-bar/chrome changes are small (tens of px), a
-  // keyboard is large (150px+). A same-width, big, sudden drop is
-  // almost certainly a keyboard, so it's ignored rather than adopted.
-  function onResize() {
-    const h = window.innerHeight;
-    const w = window.innerWidth;
-    if (w !== lastWidth) {
-      lastWidth = w;
-      apply(h);
-      return;
-    }
-    const dropped = lastAppliedHeight - h;
-    if (dropped > 150) return; // looks like a keyboard — ignore
-    apply(h);
-  }
-  window.addEventListener('resize', onResize);
-  window.addEventListener('orientationchange', () => setTimeout(measureAndApply, 100));
+  apply();
+  setTimeout(apply, 300); // catch browser chrome settling after first paint
+  window.addEventListener('resize', apply);
+  window.addEventListener('orientationchange', () => setTimeout(apply, 100));
 }
 lockViewportHeight();
+
+// Since the keyboard now overlays instead of resizing the page, we have
+// to manually make sure the chat input row (and the voiceline FAB that
+// sits near it) rise above the keyboard instead of being covered by it.
+// visualViewport is the correct API for this specifically — it DOES
+// still report the keyboard's presence via its own height/offsetTop,
+// even though the layout viewport (innerHeight) now ignores it.
+function trackKeyboardOffset() {
+  const vv = window.visualViewport;
+  if (!vv) return; // very old browsers: keyboard will simply cover the input, not ideal but non-fatal
+
+  function apply() {
+    // How much shorter the visual viewport is than the full layout
+    // viewport tells us how tall the keyboard currently is (0 when closed).
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--keyboard-inset', keyboardHeight + 'px');
+    document.body.classList.toggle('keyboard-open', keyboardHeight > 80);
+  }
+
+  apply();
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+}
+trackKeyboardOffset();
 
 // Requests fullscreen (hides the browser's URL bar/chrome on supporting
 // mobile browsers, giving a bit more usable screen height) when called

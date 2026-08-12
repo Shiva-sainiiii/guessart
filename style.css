@@ -10,6 +10,7 @@
   --border: #253531;
   --radius: 16px;
   --app-vh: 1vh; /* overwritten in px by lockViewportHeight() in app.js once JS runs */
+  --keyboard-inset: 0px; /* overwritten in px by trackKeyboardOffset() in app.js when the on-screen keyboard opens */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -434,19 +435,19 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
    crowding — going much below 16% clips the hint-tiles + clue-line
    combo on the guesser's view. */
 .screen-game {
-  position: relative;
-  max-width: 100%;
+  /* Sits inside #app-viewport (which is already position:fixed and
+     height-locked to --app-vh) — this just needs to fill that parent
+     completely, not manage its own fixed positioning on top of it.
+     Nested double-fixed elements work, but keeping only ONE fixed
+     anchor point in the whole tree is simpler to reason about and
+     avoids any stacking-context surprises. */
   width: 100%;
-  /* Locked to the layout viewport height by JS (see lockViewportHeight
-     in app.js) instead of 100dvh. dvh shrinks live when the on-screen
-     keyboard opens, which was resizing this WHOLE screen — topbar,
-     canvas and all — every time someone tapped the chat input. Now
-     only --app-vh is set once (and on real orientation/resize
-     changes), so the keyboard opening no longer touches this at all;
-     the chat panel's own scroll area absorbs the space the keyboard
-     takes instead. */
-  height: calc(var(--app-vh, 1vh) * 100);
+  height: 100%;
+  max-width: 100%;
   padding: 8px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
   justify-content: flex-start;
   gap: 6px;
   overflow: hidden;
@@ -478,6 +479,17 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 .game-panel-bottom {
   height: 34%;
   flex: 0 0 34%;
+  /* When the keyboard opens, it overlays the page (see
+     interactive-widget=overlays-content) rather than resizing anything,
+     so nothing here moves automatically. This bottom-padding — kept
+     live by trackKeyboardOffset() in app.js via --keyboard-inset — eats
+     into the SAME 34% share this panel already had, pushing the chat
+     log + input row up above the keyboard from the inside. The header
+     and canvas panels above are completely unaffected, since they
+     don't reference --keyboard-inset at all. */
+  padding-bottom: var(--keyboard-inset, 0px);
+  transition: padding-bottom 0.15s ease;
+  box-sizing: border-box;
 }
 
 /* Topbar: two player identity chips (left = me, right = friend) flank a
@@ -783,7 +795,7 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
 .width-control { display: flex; gap: 3px; }
 .btn-icon {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.12);
   color: var(--text);
   width: 30px;
   height: 30px;
@@ -841,8 +853,11 @@ button {
   right: 12px;
   /* Sits just above the chat input row instead of directly over it —
      chat-input-row is ~54px tall including padding, so lifting the FAB
-     that much clears the send button completely. */
-  bottom: calc(70px + env(safe-area-inset-bottom));
+     that much clears the send button completely. Also rises with
+     --keyboard-inset so it stays pinned just above the input row
+     instead of getting buried under the keyboard when it's open. */
+  bottom: calc(70px + env(safe-area-inset-bottom) + var(--keyboard-inset, 0px));
+  transition: bottom 0.15s ease;
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -1040,6 +1055,9 @@ button {
   padding: 8px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
+  background: var(--bg-card);
+  position: relative;
+  z-index: 2;
 }
 .chat-input-row input {
   flex: 1;
