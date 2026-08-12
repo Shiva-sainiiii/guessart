@@ -267,3 +267,24 @@ taps — this satisfies the browser's user-gesture requirement for the
 Fullscreen API. iOS Safari doesn't implement the Fullscreen API at all,
 so this has no visible effect there (a platform limitation, not a bug) —
 Android Chrome and most other mobile browsers do support it.
+
+## Phase 2.7: Critical bug fix — home screen and game screen both visible at once
+
+Found the real cause of "everything renders on top of each other" —
+`.screen-game { display: flex; ... }` was setting `display` completely
+unconditionally, with no `.active` requirement. Since `#screen-game`
+carries both the `.screen` class (which says `display: none` by
+default) and the `.screen-game` class (single-class selector, same
+specificity, declared later in the file), `.screen-game` always won the
+cascade — meaning the game screen was NEVER actually hidden, even
+before a room was created or joined. It sat there the whole time,
+stacked underneath whichever screen currently had `.active`, and became
+visible the moment its own content had anything to show, independent of
+`showScreen()`.
+
+Fixed by moving `display: flex` into `.screen-game.active` specifically,
+matching every other screen's pattern. Also added a defense-in-depth
+rule — `.screen:not(.active) { display: none !important; }` — so any
+future rule that accidentally sets `display` on a screen without gating
+it behind `.active` gets overridden rather than silently causing the
+same class of bug again.

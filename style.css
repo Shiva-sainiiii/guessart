@@ -61,6 +61,15 @@ body {
 }
 .screen.active { display: flex; }
 
+/* Defense-in-depth: explicitly force every non-active screen to stay
+   hidden with !important. This guards against exactly the class of bug
+   found in .screen-game before — a more specific or later-declared rule
+   accidentally setting `display` on a screen without gating it behind
+   .active, which silently shows two screens stacked on top of each
+   other. Any screen NOT carrying .active is hidden, full stop, no
+   matter what other rule exists for it elsewhere in this file. */
+.screen:not(.active) { display: none !important; }
+
 /* #screen-home specifically can scroll internally — the expandable
    "How it works" <details> block below can make this screen's total
    content taller than the fixed #app-viewport height once opened.
@@ -446,12 +455,19 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   max-width: 100%;
   padding: 8px;
   padding-top: calc(8px + env(safe-area-inset-top));
-  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 6px;
   overflow: hidden;
 }
+/* IMPORTANT: display must stay gated behind .active, same as every
+   other .screen. A bare `.screen-game { display: flex }` here would
+   override the base `.screen { display: none }` rule unconditionally
+   (both are single-class selectors, so the one later in the file wins
+   regardless of .active) — that was exactly the bug where the game
+   screen stayed visible UNDERNEATH the home screen the whole time,
+   because #screen-game never actually got hidden in the first place. */
+.screen-game.active { display: flex; }
 
 .game-panel-top,
 .game-panel-mid,
