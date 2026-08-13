@@ -9,54 +9,70 @@
   --success: #4ade80;
   --border: #253531;
   --radius: 16px;
-  --app-vh: 1vh; /* overwritten in px by lockViewportHeight() in app.js once JS runs */
-  --keyboard-inset: 0px; /* overwritten in px by trackKeyboardOffset() in app.js when the on-screen keyboard opens */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-html, body {
+/* ===== LAYOUT FOUNDATION — REBUILT ===== =====================================
+   Old approach: #app-viewport was `position:fixed` + a JS-measured height
+   variable (--app-vh), manually re-synced on a timer/resize listener, with a
+   SEPARATE --keyboard-inset variable manually tracking the on-screen
+   keyboard so panels could react to it via a `.keyboard-open` body class.
+   That's three different things (fixed positioning, a JS-measured height,
+   and JS-measured keyboard height) all trying to agree with each other and
+   with the real browser viewport — any place they drifted out of sync is
+   exactly what caused inputs/canvas to end up hidden behind the keyboard or
+   half-shifted off-screen.
+
+   New approach: nothing is fixed-positioned or JS-measured. `html`/`body`
+   flow normally and use `100dvh` (the CSS unit that already tracks the
+   *actual visible* viewport, keyboard included, natively, in every modern
+   mobile browser — no JS needed). Screens are normal block content, so the
+   browser's own native "scroll the focused input into view above the
+   keyboard" behavior works automatically, the same way it does on every
+   other website. This is a deliberate architecture change, not a tweak. */
+html {
   height: 100%;
-  overscroll-behavior: none;
 }
 
 body {
+  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overscroll-behavior-y: none;
 }
 
-/* #app-viewport now owns the "locked single-screen app" behavior that
-   used to live on body. Height is locked to --app-vh (set once by
-   lockViewportHeight() in app.js, and only re-set on a genuine
-   orientation/resize — never when the keyboard opens) instead of a
-   raw 100%. Fixed + full-viewport means the mobile keyboard still
-   can't drag anything off-screen. SEO content lives inline inside
-   #screen-home as a collapsible <details> block (see .about-details
-   below) instead of being placed outside this viewport. */
+/* #app-viewport is now a plain flow container, not fixed/centered. Each
+   .screen inside decides its own layout — the home/waiting/game-over
+   screens center their card via margin auto, the game screen fills the
+   dynamic viewport height and manages its own internal flex layout (see
+   .screen-game below). Because nothing here is fixed-positioned, opening
+   the keyboard on the home screen simply shrinks the visible dvh like a
+   normal webpage and the browser scrolls the focused input into view —
+   exactly the behavior that was missing before. */
 #app-viewport {
-  position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: calc(var(--app-vh, 1vh) * 100);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   background-image: radial-gradient(circle at 50% 0%, rgba(124,92,255,0.15), transparent 60%);
-  z-index: 1;
 }
 
 .screen {
   display: none;
   width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   max-width: 420px;
+  margin: 0 auto;
   padding: 24px;
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   animation: fadeIn 0.3s ease;
 }
 .screen.active { display: flex; }
@@ -70,26 +86,13 @@ body {
    matter what other rule exists for it elsewhere in this file. */
 .screen:not(.active) { display: none !important; }
 
-/* #screen-home specifically can scroll internally — the expandable
-   "How it works" <details> block below can make this screen's total
-   content taller than the fixed #app-viewport height once opened.
-   Other screens don't get this because their content never exceeds
-   the fixed viewport. */
+/* #screen-home starts content at the top (not vertically centered) since
+   its content height varies a lot (collapsed vs. expanded "How it works").
+   It's normal flow now, so it just grows taller than the viewport and the
+   page scrolls — no special-cased overflow/max-height rules needed
+   anymore, that was only necessary under the old fixed-height model. */
 #screen-home {
   justify-content: flex-start;
-}
-
-/* Scroll only kicks in once the <details> block is actually opened —
-   in the default closed state, #screen-home never scrolls at all, so
-   there's no chance of the SEO content peeking into view or the page
-   drifting on its own. :has() covers modern browsers; .has-details-open
-   is a JS-driven class (see the 'toggle' listener in app.js) for
-   browsers without :has() support. */
-#screen-home:has(.about-details[open]),
-#screen-home.has-details-open {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  max-height: 100%;
 }
 
 @keyframes fadeIn {
@@ -432,35 +435,39 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   margin: 8px 0;
 }
 
-/* ===== GAME SCREEN =====
-   Three stacked panels, each a fixed % of the total screen height:
-     16% top    — .game-panel-top    (topbar, voice strip, word/hints/clue)
-     50% mid    — .game-panel-mid    (canvas + drawing toolbar)
-     34% bottom — .game-panel-bottom (chat + its input row)
-   The reconnect banner floats above this and doesn't take a height
-   share of its own. Canvas gets the largest share since it's the
-   actual gameplay surface; header is kept just tall enough for the
-   score chips/timer/word banner/hints to stay readable without
-   crowding — going much below 16% clips the hint-tiles + clue-line
-   combo on the guesser's view. */
+/* ===== GAME SCREEN — REBUILT AS A REAL FLEX LAYOUT =====
+   Old approach: three panels each pinned to a fixed PERCENTAGE of a
+   JS-measured height (16% / 50% / 34%), with a separate `.keyboard-open`
+   rule set that manually swapped those percentages for different fixed
+   values when a JS keyboard-tracker fired. Two independent systems
+   (percentage split + manual override) had to agree, and any lag or
+   mismatch between them is what left the canvas half-shifted or the chat
+   log squeezed to nothing.
+
+   New approach: one flexbox column, sized to 100dvh (the viewport unit
+   that already accounts for the keyboard natively). Inside it:
+     - .game-panel-top and the canvas toolbar take exactly the height
+       their content needs (flex: 0 0 auto) — never more, never less.
+     - .game-panel-mid (canvas) takes flex: 1 1 auto — it gets whatever
+       space is actually left over. When the keyboard opens and 100dvh
+       shrinks, this is the panel that naturally gives up space first,
+       exactly like a normal responsive webpage.
+     - .game-panel-bottom (chat) also takes flex: 0 0 auto sized by its
+       own children, with the chat-log itself scrollable and a min-height
+       so it's never squeezed to zero.
+   No JS keyboard-tracking, no CSS custom properties measured at runtime,
+   no `.keyboard-open` class — the browser's native dvh + flexbox
+   reflow does all of this automatically, the same way it already works
+   on ordinary responsive sites. */
 .screen-game {
-  /* Sits inside #app-viewport (which is already position:fixed and
-     height-locked to --app-vh) — this just needs to fill that parent
-     completely, not manage its own fixed positioning on top of it.
-     Nested double-fixed elements work, but keeping only ONE fixed
-     anchor point in the whole tree is simpler to reason about and
-     avoids any stacking-context surprises. */
+  position: relative; /* containing block for .reconnect-banner (position:absolute) below — needed now that nothing higher up the tree is position:fixed anymore */
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   max-width: 100%;
+  margin: 0;
   padding: 8px;
   padding-top: calc(8px + env(safe-area-inset-top));
-  /* The three panels below (top/mid/bottom) reshuffle their OWN flex
-     shares via body.keyboard-open — see those rules — so this screen
-     itself no longer needs to reserve extra bottom padding for the
-     keyboard. That old padding-bottom hack was fighting with the panel
-     resize (both were trying to "make room" for the keyboard at once),
-     which is part of what left the canvas in a half-shifted state. */
   padding-bottom: calc(8px + env(safe-area-inset-bottom));
   flex-direction: column;
   justify-content: flex-start;
@@ -485,71 +492,44 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   flex-direction: column;
 }
 
+/* Header: sized by its own content (topbar + voice strip + word banner +
+   hints + clue), not a fixed percentage. On a very short viewport (e.g.
+   keyboard open on a small phone) it simply keeps its natural height —
+   it's the canvas panel below that gives up space, not this one, so the
+   score/round/turn context never disappears. */
 .game-panel-top {
-  height: 16%;
-  flex: 0 0 16%;
+  flex: 0 0 auto;
   gap: 2px;
-  justify-content: center;
-  overflow: hidden;
-  transition: flex-basis 0.18s ease, opacity 0.15s ease;
+  justify-content: flex-start;
 }
 
+/* Canvas panel: gets ALL remaining space after the header and chat panel
+   take what they need. This is the one panel that's allowed to shrink —
+   canvas.js already redraws on resize (see resizeCanvas()), so it stays
+   correct at any size down to a small minimum. */
 .game-panel-mid {
-  height: 50%;
-  flex: 0 0 50%;
+  flex: 1 1 auto;
+  min-height: 90px;
   gap: 6px;
-  transition: flex-basis 0.18s ease;
 }
 
+/* Chat panel: sized by its own content too. chat-log below has its own
+   min-height + scroll so recent messages and the input row are always
+   visible, however much (or little) vertical space ends up available. */
 .game-panel-bottom {
-  height: 34%;
-  flex: 0 0 34%;
-  transition: flex-basis 0.18s ease;
+  flex: 0 0 auto;
   box-sizing: border-box;
 }
 
-/* Keyboard-open layout — full rethink of the old version, which hid
-   the header completely and squeezed chat into a fixed 168px box.
-   Problem with that: 168px minus border/padding/input-row left almost
-   nothing for the chat-log itself, so the message you were replying to
-   (and the text you were typing) scrolled out of view behind the
-   keyboard — exactly the "can't see what I'm typing" bug. New approach:
-     - Header collapses to a single compact strip (round · timer · word)
-       instead of vanishing — you still know whose turn it is and what
-       the timer says, just not the full voice-strip/hint/clue stack.
-     - Canvas shrinks to a small "still drawing, still visible" strip
-       instead of disappearing, so a drawer who gets a keyboard prompt
-       (renaming, etc.) never fully loses sight of the board.
-     - Chat panel gets the lion's share of the remaining space via
-       flex:1 (not a fixed px value), so chat-log always has real
-       breathing room no matter how tall a given device's keyboard is.
-   Driven by --keyboard-inset (kept live by trackKeyboardOffset() in
-   app.js) via the .keyboard-open class on <body>; everything reverts
-   the instant the keyboard closes and the class comes off. */
-body.keyboard-open .game-panel-top {
-  flex: 0 0 auto;
-}
-body.keyboard-open .game-topbar { flex-shrink: 0; }
-body.keyboard-open .voice-strip,
-body.keyboard-open .word-banner,
-body.keyboard-open .hint-wrap,
-body.keyboard-open .clue-line {
-  display: none;
-}
-body.keyboard-open .game-panel-mid {
-  flex: 0 0 96px;
-}
-body.keyboard-open .toolbar {
-  display: none;
-}
-body.keyboard-open .game-panel-bottom {
-  flex: 1 1 auto;
-  min-height: 140px;
-}
-/* Keep the FAB and its menu out of the way while the keyboard (and the
-   now-taller chat panel) are occupying that same lower slice of the
-   screen — reopening it is one tap once the keyboard is dismissed. */
-body.keyboard-open .voiceline-fab {
+/* Voiceline FAB isn't useful real estate while the on-screen keyboard is
+   covering the lower part of the screen (its own position:fixed bottom
+   offset can't know where the OS keyboard actually starts). Hide it
+   whenever a text input in the game screen has focus, and bring it back
+   on blur. :has() covers modern browsers natively; .input-focused is a
+   JS-driven fallback class (see guardInputFocusScroll() in app.js) for
+   browsers without :has() support. */
+.screen-game:has(input:focus) .voiceline-fab,
+.screen-game.input-focused .voiceline-fab {
   display: none;
 }
 
@@ -787,11 +767,12 @@ body.keyboard-open .voiceline-fab {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Canvas fills the rest of .game-panel-mid (which is a fixed 40% of
-   the screen) after the toolbar takes its own space below — so the
-   canvas's on-screen size is pinned to that 40% panel and never
-   changes when the keyboard opens (only the chat panel below is
-   affected by that). */
+/* Canvas fills whatever space .game-panel-mid has left after the
+   toolbar below takes its own intrinsic height. .game-panel-mid itself
+   is flex:1 within the game screen (see above), so this whole area
+   grows/shrinks naturally with real available space — including when
+   the keyboard eats into 100dvh. canvas.js's resizeCanvas() redraws all
+   strokes at the new size, so shrinking here never loses the drawing. */
 .canvas-wrap {
   position: relative;
   width: 100%;
@@ -1016,22 +997,29 @@ button {
 }
 .voiceline-btn:active { transform: translate(var(--tx), var(--ty)) scale(0.88); }
 
-/* ===== CHAT — Instagram-style bubbles ===== */
+/* ===== CHAT — Instagram-style bubbles =====
+   Chat panel: takes a comfortable fixed-ish height (not a % of a
+   JS-measured viewport, just a plain height value with a sane min/max
+   clamp) — its parent .game-panel-bottom is flex:0 0 auto, so this is
+   the actual size driver. On a normal-height viewport this comfortably
+   fits several message rows; on a very short viewport (small phone,
+   landscape, or keyboard eating into 100dvh) it clamps down to
+   min-height so the canvas panel (flex:1) can claim the rest — see
+   .game-panel-mid above. */
 .chat-panel {
   width: 100%;
-  height: 100%;
+  height: clamp(140px, 30vh, 260px);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0; /* required so the inner scroller can actually shrink/scroll instead of overflowing the page */
 }
 
 .chat-log {
   flex: 1;
-  min-height: 60px; /* guarantees at least a couple of message rows stay visible even in the shortest keyboard-open state, instead of shrinking to zero next to the input row */
+  min-height: 44px; /* guarantees at least a message row or two stays visible even at the panel's smallest clamp, instead of shrinking to zero next to the input row */
   overflow-y: auto;
   padding: 10px 10px 4px;
   display: flex;

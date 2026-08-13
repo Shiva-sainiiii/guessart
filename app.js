@@ -29,97 +29,43 @@ const screens = {
   gameOver: document.getElementById('screen-game-over'),
 };
 
-// ---------- VIEWPORT LOCK ----------
-// Keeps .screen-game's height pinned to a value that only changes on a
-// GENUINE orientation/chrome change — never on keyboard open — so the
-// whole app column doesn't jump around while typing.
+// ---------- KEYBOARD-AWARE LAYOUT ----------
+// The old version of this file manually measured window.innerHeight and
+// visualViewport in JS, wrote them into --app-vh / --keyboard-inset CSS
+// variables, and toggled a `.keyboard-open` body class that a whole
+// separate set of CSS rules reacted to. That's a lot of moving parts
+// trying to agree with the real browser viewport, and any place they
+// drifted out of sync (which real devices did, inconsistently) is what
+// caused inputs to end up hidden behind the keyboard or the canvas to
+// end up half-shifted off-screen.
 //
-// Why not just trust `interactive-widget=overlays-content` to freeze
-// window.innerHeight on its own: in practice a lot of real Android
-// keyboards (stock Gboard included) still fire resize/innerHeight
-// changes inconsistently across devices and browser versions, so
-// relying on that alone left the canvas/topbar drifting mid-keyboard on
-// exactly the phones this was meant to protect. Instead we lock
-// --app-vh from window.innerHeight once at load/orientation-change, and
-// separately ignore any resize that looks keyboard-shaped (see below).
-let lastStableInnerHeight = window.innerHeight;
-
-function lockViewportHeight() {
-  function apply() {
-    lastStableInnerHeight = window.innerHeight;
-    document.documentElement.style.setProperty('--app-vh', (window.innerHeight / 100) + 'px');
-  }
-  apply();
-  setTimeout(apply, 300); // catch browser chrome settling after first paint
-
-  // A plain `resize` event fires for BOTH real chrome/orientation
-  // changes AND (on some browsers) keyboard open/close. We only want to
-  // re-lock for the former. Heuristic: a keyboard shrinks the window by
-  // a large, sudden amount (>25% of height) and recovers to roughly the
-  // same value on close; a real orientation/chrome change doesn't
-  // bounce back. So: re-lock on any resize, but skip it entirely while
-  // the on-screen keyboard is known to be open (tracked below).
-  window.addEventListener('resize', () => {
-    if (document.body.classList.contains('keyboard-open')) return;
-    apply();
-  });
-  window.addEventListener('orientationchange', () => setTimeout(apply, 150));
-}
-lockViewportHeight();
-
-// Since the keyboard can overlay OR resize the page depending on the
-// device, we track its height directly via visualViewport (the correct
-// API for this — it always reflects the visible area, regardless of
-// how the browser chose to handle the keyboard) and expose it as a CSS
-// var + a body class that the game-screen layout reacts to.
-function trackKeyboardOffset() {
-  const vv = window.visualViewport;
-  if (!vv) return; // very old browsers: keyboard will simply cover the input, not ideal but non-fatal
-
-  let rafPending = false;
-
-  function apply() {
-    rafPending = false;
-    // Use the larger of window.innerHeight and the last known stable
-    // height as the "no keyboard" baseline — covers both the overlay
-    // model (innerHeight never moves) and the resize model (innerHeight
-    // shrinks along with visualViewport).
-    const baseline = Math.max(window.innerHeight, lastStableInnerHeight);
-    const keyboardHeight = Math.max(0, Math.round(baseline - vv.height - vv.offsetTop));
-    document.documentElement.style.setProperty('--keyboard-inset', keyboardHeight + 'px');
-    document.body.classList.toggle('keyboard-open', keyboardHeight > 80);
-  }
-
-  function scheduleApply() {
-    if (rafPending) return;
-    rafPending = true;
-    requestAnimationFrame(apply);
-  }
-
-  apply();
-  vv.addEventListener('resize', scheduleApply);
-  vv.addEventListener('scroll', scheduleApply);
-}
-trackKeyboardOffset();
-
-// Belt-and-suspenders: whenever the chat input (or any text input in
-// the game screen) is focused, explicitly scroll it into view once the
-// keyboard has finished animating in. Some mobile browsers try to
-// "helpfully" auto-scroll the whole page on focus, which fights with
-// our fixed-position #app-viewport and is exactly what caused the
-// canvas to get shoved off-screen — this re-asserts our own layout
-// after the browser's attempt settles.
+// None of that is needed anymore. The layout in style.css now uses
+// 100dvh + flexbox throughout (see .screen, .screen-game, .game-panel-*),
+// which already tracks the real visible viewport — keyboard included —
+// natively in the browser, the same way it does on any other responsive
+// website. The only thing left to do here is a small nudge: on some
+// Android WebViews the browser's own "scroll focused input into view"
+// behavior can be a beat slow, so we help it along without fighting the
+// layout (no scrollTo(0,0), no fixed-position assumptions).
+// Small nudge (see comment above) + a focus/blur class fallback for the
+// voiceline FAB hide-while-typing behavior on browsers that don't
+// support the :has() CSS selector yet (see .screen-game:has(input:focus)
+// in style.css, which handles this natively where supported).
 function guardInputFocusScroll() {
   document.addEventListener('focusin', (e) => {
     const el = e.target;
     if (!(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'))) return;
-    if (!screens.game || !screens.game.classList.contains('active')) return;
-    // Reset any scroll the browser tried to apply to the locked viewport.
-    window.scrollTo(0, 0);
+    if (screens.game && screens.game.classList.contains('active')) {
+      screens.game.classList.add('input-focused');
+    }
     setTimeout(() => {
-      window.scrollTo(0, 0);
-      el.scrollIntoView({ block: 'nearest' });
-    }, 250);
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 150);
+  });
+  document.addEventListener('focusout', (e) => {
+    const el = e.target;
+    if (!(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'))) return;
+    if (screens.game) screens.game.classList.remove('input-focused');
   });
 }
 guardInputFocusScroll();
@@ -145,17 +91,11 @@ function showScreen(name) {
   screens[name].classList.add('active');
 }
 
-// Fallback for browsers without :has() support (the CSS rule
-// `#screen-home:has(.about-details[open])` handles this natively in
-// modern browsers, but this keeps older ones working too): toggle a
-// class on #screen-home directly whenever the SEO <details> block is
-// opened or closed, so scrolling only turns on while it's actually open.
-const aboutDetails = document.querySelector('.about-details');
-if (aboutDetails) {
-  aboutDetails.addEventListener('toggle', () => {
-    document.getElementById('screen-home').classList.toggle('has-details-open', aboutDetails.open);
-  });
-}
+// Note: #screen-home no longer needs special scroll-toggling for the SEO
+// <details> block — now that #screen-home is normal document flow (not a
+// fixed-height box), it just grows taller than the viewport when the
+// details are expanded and the whole page scrolls, same as any ordinary
+// webpage. No JS or :has() CSS needed for that anymore.
 
 const statusMsg = document.getElementById('status-msg');
 function setStatus(msg, isError = false) {
