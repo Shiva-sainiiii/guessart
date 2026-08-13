@@ -563,6 +563,14 @@ function onTurnStart({ round, totalRounds, isMyTurn, word }) {
   const overlay = document.getElementById('canvas-overlay');
   overlay.classList.add('hidden');
 
+  // DrawCanvas.setCanDraw() (called by Game.startTurn() just before this
+  // callback fires) resets isFillMode/isEraser internally every turn, so
+  // the fill/eraser buttons' .active class must be cleared here too —
+  // otherwise a button could stay visually "on" from a previous turn
+  // while the underlying state is already off, or vice versa.
+  document.getElementById('btn-fill').classList.remove('active');
+  document.getElementById('btn-eraser').classList.remove('active');
+
   if (isMyTurn) {
     banner.innerHTML = `Draw this: <span class="the-word">${word}</span>`;
     toolbar.classList.remove('disabled');

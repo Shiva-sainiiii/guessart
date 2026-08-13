@@ -237,8 +237,27 @@ const DrawCanvas = (() => {
       resizeCanvas();
       requestAnimationFrame(resizeCanvas);
 
+      // .canvas-wrap's height comes from a flex:1 parent (.game-panel-mid)
+      // that settles AFTER its siblings' content is known (word-banner
+      // text wrap, hint tiles populating a moment later, chat log height,
+      // etc). A one-shot + rAF resize can sample the size before that
+      // flex redistribution finishes and lock the backing store at a
+      // too-short height — the CSS box still stretches to fill the real
+      // space, so drawing above the locked height shows fine and
+      // everything below it reads as blank (empty, unbacked canvas
+      // region). ResizeObserver watches the actual box .canvas-wrap ends
+      // up at, however many reflows it takes to get there, and re-syncs
+      // automatically — unlike window's 'resize' event, which only fires
+      // for viewport-level changes, not internal flex reflows.
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => resizeCanvas());
+        ro.observe(canvas.parentElement);
+      }
+
       // Debounce window resize (mobile keyboard open/close fires this a
-      // lot) so we don't thrash the canvas mid-typing.
+      // lot) so we don't thrash the canvas mid-typing. Kept alongside
+      // ResizeObserver as a fallback for viewport-level changes (e.g.
+      // browsers where ResizeObserver support is missing).
       let resizeTimer = null;
       window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
@@ -297,7 +316,20 @@ const DrawCanvas = (() => {
 
     hasHistory() { return strokeHistory.length > 0; },
 
-    setCanDraw(value) { canDraw = value; },
+    // Called at the start of every turn (both drawer and guesser side).
+    // Fill/eraser mode used to persist silently across turns in this
+    // shared module — a drawer who left fill ON last time they drew
+    // would find their next click on "Fill" turning it OFF (toggling
+    // off a `true` that the UI never showed as active), because the
+    // button's .active class gets reset on turn start but this internal
+    // boolean didn't. Resetting here keeps the internal state and the
+    // toolbar's visual state starting from the same clean baseline every
+    // turn, same as color/width already do implicitly via setColor().
+    setCanDraw(value) {
+      canDraw = value;
+      isFillMode = false;
+      isEraser = false;
+    },
     setColor(color) { currentColor = color; isEraser = false; isFillMode = false; },
     setWidth(width) { currentWidth = width; },
     setEraser(value) { isEraser = value; if (value) isFillMode = false; },
