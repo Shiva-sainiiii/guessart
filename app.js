@@ -70,21 +70,16 @@ function guardInputFocusScroll() {
 }
 guardInputFocusScroll();
 
-// Requests fullscreen (hides the browser's URL bar/chrome on supporting
-// mobile browsers, giving a bit more usable screen height) when called
-// from inside a user gesture handler — Chrome/Android and most other
-// mobile browsers require that; a bare page-load call is silently
-// blocked by the browser, which is why this is invoked from the
-// Create/Join button click handlers instead of on page load. iOS Safari
-// doesn't support the Fullscreen API at all — the catch below means it
-// just does nothing there instead of throwing.
-function requestAppFullscreen() {
-  const el = document.documentElement;
-  const request = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  if (request) {
-    try { request.call(el).catch(() => {}); } catch (e) { /* unsupported or blocked — ignore */ }
-  }
-}
+// NOTE: fullscreen mode was removed here. It used the Fullscreen API to
+// hide the browser's URL bar for a bit of extra vertical space, but on
+// real devices this caused more problems than it solved: Chrome's
+// autofill/password-manager panel popping up over the game, the timer
+// getting clipped because safe-area-inset values behave differently
+// inside a fullscreen context, and orientation flipping to landscape on
+// some browsers since Fullscreen API alone doesn't lock orientation.
+// The 100dvh + flexbox layout (see style.css) already adapts correctly
+// to however much space the browser's normal (non-fullscreen) chrome
+// leaves available, so fullscreen isn't needed for the layout to work.
 
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
@@ -272,7 +267,6 @@ refreshHomeButtonStates();
 
 createBtn.addEventListener('click', () => {
   if (createBtn.disabled) { nudgeNameField(); return; }
-  requestAppFullscreen();
   myName = nameInput.value.trim();
   amHost = true;
   Connection.createRoom(
@@ -298,7 +292,6 @@ joinBtn.addEventListener('click', () => {
     if (nameInput.value.trim().length === 0) nudgeNameField();
     return;
   }
-  requestAppFullscreen();
   myName = nameInput.value.trim();
   const code = joinCodeInput.value.trim().toUpperCase();
   amHost = false;

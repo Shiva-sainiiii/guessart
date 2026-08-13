@@ -170,12 +170,29 @@
 
   <!-- ================================================================
        APP VIEWPORT
-       All game screens live inside this fixed, full-viewport wrapper.
-       This is what used to be pinned directly on <body> — moving the
-       fixed/flex/centering behavior here (instead of on body) keeps
-       the game locked to a single screen exactly as before.
+       All game screens live inside this normal-flow wrapper (see the
+       LAYOUT FOUNDATION comment in style.css for why it's not
+       position:fixed anymore).
        ================================================================ -->
   <div id="app-viewport">
+
+  <!-- Landscape guard: covers the whole screen and blocks interaction
+       whenever the device is rotated to landscape. This game's layout
+       (canvas + chat stacked vertically) is portrait-only by design, so
+       rather than trying to reflow into a landscape layout (or relying
+       on the Fullscreen/Orientation-Lock APIs, which most mobile
+       browsers restrict or ignore outside an installed PWA), we simply
+       ask the player to rotate back. Pure CSS (see @media
+       (orientation: landscape) in style.css) — works identically across
+       Chrome, Samsung Internet, and any other Android browser regardless
+       of how each one handles fullscreen/orientation-lock. -->
+  <div id="rotate-guard">
+    <div class="rotate-guard-inner">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 18h.01"/></svg>
+      <p>GuessArt works best in portrait mode.</p>
+      <p class="rotate-guard-sub">Please rotate your phone back to continue.</p>
+    </div>
+  </div>
 
   <!-- SCREEN 1: HOME / LOBBY -->
   <div id="screen-home" class="screen active">
