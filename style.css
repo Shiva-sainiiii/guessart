@@ -455,17 +455,13 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   max-width: 100%;
   padding: 8px;
   padding-top: calc(8px + env(safe-area-inset-top));
-  /* Since the keyboard OVERLAYS the page instead of resizing it (see
-     interactive-widget=overlays-content), this screen's bottom edge
-     stays physically at the real screen bottom — right behind the
-     keyboard — unless we push it up ourselves. --keyboard-inset (kept
-     live by trackKeyboardOffset() in app.js) is exactly the keyboard's
-     current height, so this padding lifts the whole column (and
-     therefore the chat panel sitting at its bottom) to end just above
-     the keyboard rather than disappearing underneath it. 0 when the
-     keyboard is closed, so this never affects normal layout. */
-  padding-bottom: calc(8px + var(--keyboard-inset, 0px));
-  transition: padding-bottom 0.18s ease;
+  /* The three panels below (top/mid/bottom) reshuffle their OWN flex
+     shares via body.keyboard-open — see those rules — so this screen
+     itself no longer needs to reserve extra bottom padding for the
+     keyboard. That old padding-bottom hack was fighting with the panel
+     resize (both were trying to "make room" for the keyboard at once),
+     which is part of what left the canvas in a half-shifted state. */
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
   flex-direction: column;
   justify-content: flex-start;
   gap: 6px;
@@ -512,25 +508,49 @@ input[type="text"]:focus { outline: 2px solid var(--primary); }
   box-sizing: border-box;
 }
 
-/* Keyboard-open layout: the header panel slides away entirely instead
-   of just shrinking, handing its whole share of the screen to the
-   canvas — this is the "header hides upward, canvas takes its place"
-   behavior. The chat panel switches from a % share to a fixed pixel
-   height so the input row AND the most recent message stay visible
-   above the keyboard, rather than just a sliver of the input row.
+/* Keyboard-open layout — full rethink of the old version, which hid
+   the header completely and squeezed chat into a fixed 168px box.
+   Problem with that: 168px minus border/padding/input-row left almost
+   nothing for the chat-log itself, so the message you were replying to
+   (and the text you were typing) scrolled out of view behind the
+   keyboard — exactly the "can't see what I'm typing" bug. New approach:
+     - Header collapses to a single compact strip (round · timer · word)
+       instead of vanishing — you still know whose turn it is and what
+       the timer says, just not the full voice-strip/hint/clue stack.
+     - Canvas shrinks to a small "still drawing, still visible" strip
+       instead of disappearing, so a drawer who gets a keyboard prompt
+       (renaming, etc.) never fully loses sight of the board.
+     - Chat panel gets the lion's share of the remaining space via
+       flex:1 (not a fixed px value), so chat-log always has real
+       breathing room no matter how tall a given device's keyboard is.
    Driven by --keyboard-inset (kept live by trackKeyboardOffset() in
    app.js) via the .keyboard-open class on <body>; everything reverts
    the instant the keyboard closes and the class comes off. */
 body.keyboard-open .game-panel-top {
-  flex: 0 0 0%;
-  opacity: 0;
-  pointer-events: none;
+  flex: 0 0 auto;
+}
+body.keyboard-open .game-topbar { flex-shrink: 0; }
+body.keyboard-open .voice-strip,
+body.keyboard-open .word-banner,
+body.keyboard-open .hint-wrap,
+body.keyboard-open .clue-line {
+  display: none;
 }
 body.keyboard-open .game-panel-mid {
-  flex: 1 1 auto;
+  flex: 0 0 96px;
+}
+body.keyboard-open .toolbar {
+  display: none;
 }
 body.keyboard-open .game-panel-bottom {
-  flex: 0 0 168px;
+  flex: 1 1 auto;
+  min-height: 140px;
+}
+/* Keep the FAB and its menu out of the way while the keyboard (and the
+   now-taller chat panel) are occupying that same lower slice of the
+   screen — reopening it is one tap once the keyboard is dismissed. */
+body.keyboard-open .voiceline-fab {
+  display: none;
 }
 
 /* Topbar: two player identity chips (left = me, right = friend) flank a
@@ -1011,6 +1031,7 @@ button {
 
 .chat-log {
   flex: 1;
+  min-height: 60px; /* guarantees at least a couple of message rows stay visible even in the shortest keyboard-open state, instead of shrinking to zero next to the input row */
   overflow-y: auto;
   padding: 10px 10px 4px;
   display: flex;

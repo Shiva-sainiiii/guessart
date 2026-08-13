@@ -30,53 +30,99 @@ const screens = {
 };
 
 // ---------- VIEWPORT LOCK ----------
-// Keeps .screen-game's height pinned to the actual layout viewport
-// instead of live 100dvh, so opening the on-screen keyboard never
-// resizes the topbar/canvas/toolbar — only the chat panel's own
-// scroll area feels it (see .screen-game in style.css).
+// Keeps .screen-game's height pinned to a value that only changes on a
+// GENUINE orientation/chrome change — never on keyboard open — so the
+// whole app column doesn't jump around while typing.
 //
-// With `interactive-widget=overlays-content` set in the viewport meta
-// tag (see index.html), the on-screen keyboard opening no longer
-// changes window.innerHeight AT ALL on modern Android/Chrome and iOS
-// Safari — the keyboard simply overlays on top of the page instead of
-// shrinking the layout. That's what makes the rest of this app's fixed
-// heights (--app-vh, .screen-game) stable: they're set once from a
-// value that genuinely never moves for keyboard opens, only for real
-// chrome/orientation changes.
+// Why not just trust `interactive-widget=overlays-content` to freeze
+// window.innerHeight on its own: in practice a lot of real Android
+// keyboards (stock Gboard included) still fire resize/innerHeight
+// changes inconsistently across devices and browser versions, so
+// relying on that alone left the canvas/topbar drifting mid-keyboard on
+// exactly the phones this was meant to protect. Instead we lock
+// --app-vh from window.innerHeight once at load/orientation-change, and
+// separately ignore any resize that looks keyboard-shaped (see below).
+let lastStableInnerHeight = window.innerHeight;
+
 function lockViewportHeight() {
   function apply() {
+    lastStableInnerHeight = window.innerHeight;
     document.documentElement.style.setProperty('--app-vh', (window.innerHeight / 100) + 'px');
   }
   apply();
   setTimeout(apply, 300); // catch browser chrome settling after first paint
-  window.addEventListener('resize', apply);
-  window.addEventListener('orientationchange', () => setTimeout(apply, 100));
+
+  // A plain `resize` event fires for BOTH real chrome/orientation
+  // changes AND (on some browsers) keyboard open/close. We only want to
+  // re-lock for the former. Heuristic: a keyboard shrinks the window by
+  // a large, sudden amount (>25% of height) and recovers to roughly the
+  // same value on close; a real orientation/chrome change doesn't
+  // bounce back. So: re-lock on any resize, but skip it entirely while
+  // the on-screen keyboard is known to be open (tracked below).
+  window.addEventListener('resize', () => {
+    if (document.body.classList.contains('keyboard-open')) return;
+    apply();
+  });
+  window.addEventListener('orientationchange', () => setTimeout(apply, 150));
 }
 lockViewportHeight();
 
-// Since the keyboard now overlays instead of resizing the page, we have
-// to manually make sure the chat input row (and the voiceline FAB that
-// sits near it) rise above the keyboard instead of being covered by it.
-// visualViewport is the correct API for this specifically — it DOES
-// still report the keyboard's presence via its own height/offsetTop,
-// even though the layout viewport (innerHeight) now ignores it.
+// Since the keyboard can overlay OR resize the page depending on the
+// device, we track its height directly via visualViewport (the correct
+// API for this — it always reflects the visible area, regardless of
+// how the browser chose to handle the keyboard) and expose it as a CSS
+// var + a body class that the game-screen layout reacts to.
 function trackKeyboardOffset() {
   const vv = window.visualViewport;
   if (!vv) return; // very old browsers: keyboard will simply cover the input, not ideal but non-fatal
 
+  let rafPending = false;
+
   function apply() {
-    // How much shorter the visual viewport is than the full layout
-    // viewport tells us how tall the keyboard currently is (0 when closed).
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    rafPending = false;
+    // Use the larger of window.innerHeight and the last known stable
+    // height as the "no keyboard" baseline — covers both the overlay
+    // model (innerHeight never moves) and the resize model (innerHeight
+    // shrinks along with visualViewport).
+    const baseline = Math.max(window.innerHeight, lastStableInnerHeight);
+    const keyboardHeight = Math.max(0, Math.round(baseline - vv.height - vv.offsetTop));
     document.documentElement.style.setProperty('--keyboard-inset', keyboardHeight + 'px');
     document.body.classList.toggle('keyboard-open', keyboardHeight > 80);
   }
 
+  function scheduleApply() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(apply);
+  }
+
   apply();
-  vv.addEventListener('resize', apply);
-  vv.addEventListener('scroll', apply);
+  vv.addEventListener('resize', scheduleApply);
+  vv.addEventListener('scroll', scheduleApply);
 }
 trackKeyboardOffset();
+
+// Belt-and-suspenders: whenever the chat input (or any text input in
+// the game screen) is focused, explicitly scroll it into view once the
+// keyboard has finished animating in. Some mobile browsers try to
+// "helpfully" auto-scroll the whole page on focus, which fights with
+// our fixed-position #app-viewport and is exactly what caused the
+// canvas to get shoved off-screen — this re-asserts our own layout
+// after the browser's attempt settles.
+function guardInputFocusScroll() {
+  document.addEventListener('focusin', (e) => {
+    const el = e.target;
+    if (!(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'))) return;
+    if (!screens.game || !screens.game.classList.contains('active')) return;
+    // Reset any scroll the browser tried to apply to the locked viewport.
+    window.scrollTo(0, 0);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      el.scrollIntoView({ block: 'nearest' });
+    }, 250);
+  });
+}
+guardInputFocusScroll();
 
 // Requests fullscreen (hides the browser's URL bar/chrome on supporting
 // mobile browsers, giving a bit more usable screen height) when called
