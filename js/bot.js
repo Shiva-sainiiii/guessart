@@ -309,6 +309,66 @@ const BotBrain = (() => {
     return genericSketch(key);
   }
 
+  // ---- LLM-backed drawing plan (falls back to templateFor on any failure) ----
+  // Converts the serverless function's {shape,...} beat format into the
+  // same {segs:[{x1,y1,x2,y2}...], color, width} shape the rest of this
+  // file (and BotPeer's pacer) already expects from TEMPLATES/genericSketch.
+  function beatsToSegFormat(beats) {
+    return beats.map(b => {
+      if (b.shape === 'line') {
+        return { segs: polyline(b.points, 2), color: b.color, width: b.width };
+      }
+      if (b.shape === 'circle') {
+        return { segs: circle(b.cx, b.cy, b.r), color: b.color, width: b.width };
+      }
+      // ellipse
+      return { segs: ellipse(b.cx, b.cy, b.rx, b.ry), color: b.color, width: b.width };
+    });
+  }
+
+  const DRAW_CACHE_KEY = 'guessart_bot_draw_cache_v1';
+
+  function loadDrawCache() {
+    try { return JSON.parse(localStorage.getItem(DRAW_CACHE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveDrawCache(cache) {
+    try { localStorage.setItem(DRAW_CACHE_KEY, JSON.stringify(cache)); } catch { /* storage full/unavailable — skip */ }
+  }
+
+  // Returns a Promise<beats-in-seg-format>. Tries cache, then the LLM
+  // endpoint, then falls back to the deterministic template/generic
+  // sketch on any error/timeout so a round can never hang waiting on
+  // a flaky free-tier API.
+  async function planDrawingSmart(word) {
+    const key = word.toLowerCase().trim();
+    const cache = loadDrawCache();
+    if (cache[key]) return cache[key];
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 9000);
+      const res = await fetch('/api/bot-brain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'draw', word: key }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error('bot-brain draw request failed: ' + res.status);
+      const data = await res.json();
+      if (!data.beats || !data.beats.length) throw new Error('empty beats');
+
+      const segFormat = beatsToSegFormat(data.beats);
+      cache[key] = segFormat;
+      saveDrawCache(cache);
+      return segFormat;
+    } catch (err) {
+      console.warn('[BotBrain] LLM drawing failed, using template fallback:', err.message || err);
+      return templateFor(key);
+    }
+  }
+
   // ---- Guessing brain ----
   // Tracks what the bot currently knows about the secret word: the
   // letter/space pattern, any letters revealed so far, and every clue
@@ -365,14 +425,59 @@ const BotBrain = (() => {
     return best;
   }
 
+  // ---- LLM-backed guess (falls back to bestCandidate on any failure) ----
+  // Sends the bot's current knowledge (pattern/revealed/clues/tried) to
+  // the serverless endpoint and asks for one best-guess word. Runs
+  // alongside bestCandidate() as a safety net: if the LLM call fails,
+  // times out, returns PASS, or repeats something already tried, we
+  // fall straight through to the deterministic keyword-scoring guess
+  // instead of the bot going silent for that tick.
+  async function chooseGuessSmart(state) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
+      const res = await fetch('/api/bot-brain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'guess',
+          pattern: state.pattern,
+          revealed: state.revealed,
+          clues: state.clueWords.length ? [state.clueWords.join(' ')] : [],
+          tried: Array.from(state.triedGuesses),
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error('bot-brain guess request failed: ' + res.status);
+      const data = await res.json();
+      const guess = (data.guess || '').trim().toLowerCase();
+      if (guess && !state.triedGuesses.has(guess)) {
+        state.triedGuesses.add(guess);
+        return guess;
+      }
+      // LLM passed or repeated — fall back to deterministic candidate.
+      return bestCandidate(state);
+    } catch (err) {
+      console.warn('[BotBrain] LLM guess failed, using keyword-scoring fallback:', err.message || err);
+      return bestCandidate(state);
+    }
+  }
+
   return {
     TEMPLATES_AVAILABLE: Object.keys(TEMPLATES),
 
     // Returns an ordered list of drawing "beats" for the bot-as-drawer to
     // paint out over the round. Each beat: { segs: [...], color, width }.
+    // Synchronous deterministic version — used as instant fallback.
     planDrawing(word) {
       return templateFor(word);
     },
+
+    // Async LLM-backed version — resolves to the same beat shape as
+    // planDrawing(), but tries the OpenRouter-backed endpoint (with
+    // caching) first. Always resolves; never rejects.
+    planDrawingSmart,
 
     newGuesserState: makeGuesserState,
 
@@ -389,12 +494,19 @@ const BotBrain = (() => {
 
     // Decide whether/what to guess right now. Returns a string to send as
     // a chat guess, or null to stay quiet this tick (keeps the bot from
-    // spamming a guess every single second).
+    // spamming a guess every single second). Deterministic — instant.
     chooseGuess(state) {
       const guess = bestCandidate(state);
       if (!guess) return null;
       state.triedGuesses.add(guess);
       return guess;
+    },
+
+    // Async LLM-backed version of chooseGuess. Always resolves (never
+    // rejects); returns null only if neither the LLM nor the fallback
+    // scorer has a candidate left.
+    chooseGuessSmart(state) {
+      return chooseGuessSmart(state);
     },
   };
 })();
@@ -440,15 +552,11 @@ const BotPeer = (() => {
 
   // Paces out the bot's drawing plan as a sequence of stroke messages,
   // spread across most of the round so it doesn't finish instantly.
+  // The drawing plan itself is fetched async (LLM first, template
+  // fallback) — everything else (pattern reveal, clue timing, the
+  // round timeout) is scheduled immediately so a slow/failed LLM call
+  // never delays the parts of the round the human is waiting on.
   function startBotDrawing(word) {
-    const beats = BotBrain.planDrawing(word);
-    drawQueue = [];
-    beats.forEach(beat => {
-      beat.segs.forEach(seg => {
-        drawQueue.push(Object.assign({ color: beat.color, width: beat.width, erase: false }, seg));
-      });
-    });
-
     // Send the word-length pattern immediately (matches a real drawer's flow).
     emit({ type: 'word_length', pattern: word.split('').map(ch => (ch === ' ' ? ' ' : 'L')).join('') });
 
@@ -467,19 +575,6 @@ const BotPeer = (() => {
       setTimeout(() => emit({ type: 'clue', text }), 4000 + i * 12000);
     });
 
-    // Drip out strokes over roughly 45 seconds so the sketch builds up
-    // progressively instead of appearing all at once.
-    const totalMs = 45000;
-    const perStroke = Math.max(60, totalMs / Math.max(1, drawQueue.length));
-    let i = 0;
-    function tick() {
-      if (i >= drawQueue.length || roundOver) return;
-      emit({ type: 'stroke', x1: drawQueue[i].x1, y1: drawQueue[i].y1, x2: drawQueue[i].x2, y2: drawQueue[i].y2, color: drawQueue[i].color, width: drawQueue[i].width, erase: false });
-      i++;
-      drawTimer = setTimeout(tick, perStroke + (Math.random() * 40 - 20));
-    }
-    drawTimer = setTimeout(tick, 500);
-
     // When the bot is drawing, IT is the "drawer's client" and so must be
     // the one authoritative for a timeout, exactly like Game.js's own
     // onTimerTick() is for a human drawer (see app.js). Without this, a
@@ -492,16 +587,48 @@ const BotPeer = (() => {
       roundOver = true;
       emit({ type: 'timeout', word: secretWord });
     }, ROUND_SECONDS * 1000);
+
+    // Fetch the drawing plan (LLM-backed, cached, with template fallback
+    // baked into planDrawingSmart itself) and then start pacing strokes
+    // out once it resolves. A brief "thinking" beat before the first
+    // stroke lands reads as natural rather than robotic.
+    BotBrain.planDrawingSmart(word).then(beats => {
+      if (roundOver || secretWord !== word) return; // round moved on while we were waiting on the network
+
+      drawQueue = [];
+      beats.forEach(beat => {
+        beat.segs.forEach(seg => {
+          drawQueue.push(Object.assign({ color: beat.color, width: beat.width, erase: false }, seg));
+        });
+      });
+
+      // Drip out strokes over roughly 45 seconds so the sketch builds up
+      // progressively instead of appearing all at once.
+      const totalMs = 45000;
+      const perStroke = Math.max(60, totalMs / Math.max(1, drawQueue.length));
+      let i = 0;
+      function tick() {
+        if (i >= drawQueue.length || roundOver) return;
+        emit({ type: 'stroke', x1: drawQueue[i].x1, y1: drawQueue[i].y1, x2: drawQueue[i].x2, y2: drawQueue[i].y2, color: drawQueue[i].color, width: drawQueue[i].width, erase: false });
+        i++;
+        drawTimer = setTimeout(tick, perStroke + (Math.random() * 40 - 20));
+      }
+      drawTimer = setTimeout(tick, 500);
+    });
   }
 
   // Bot-as-guesser: periodically evaluate whether it has enough signal
   // to take a guess, with human-like variable timing (not every second).
+  // Each tick asks the LLM-backed guesser (which itself falls back to
+  // the deterministic keyword scorer on any failure), so a guess is
+  // always eventually offered even if OpenRouter is down or rate-limited.
   function startBotGuessing() {
     guesserState = BotBrain.newGuesserState();
     function tick() {
       const delay = 4000 + Math.random() * 5000;
-      guessTimer = setTimeout(() => {
-        const guess = BotBrain.chooseGuess(guesserState);
+      guessTimer = setTimeout(async () => {
+        const guess = await BotBrain.chooseGuessSmart(guesserState);
+        if (roundOver) return; // round ended while the guess call was in flight
         if (guess) {
           emit({ type: 'chat', text: guess, name: botName, msgId: 'bot' + Date.now() });
         }
