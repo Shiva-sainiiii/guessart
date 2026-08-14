@@ -1,6 +1,6 @@
 // ===== app.js — Wires up UI + Connection + Canvas + Game =====
 //
-// Network message protocol (all messages are JSON objects sent via Connection.send):
+// Network message protocol (all messages are JSON objects sent via Net.send):
 //   { type: 'hello', name }                         — sent right after connecting, exchange names
 //   { type: 'rename', name }                          — either player changes their name mid-game via Settings
 //   { type: 'start_turn', drawerIsMe }               — host tells guest whose turn (drawerIsMe is from HOST's perspective, guest flips it)
@@ -101,6 +101,16 @@ function setStatus(msg, isError = false) {
 let myName = 'You';
 let friendName = 'Friend';
 let amHost = false;
+let isBotGame = false; // true when playing solo vs the computer (BotPeer instead of Connection/WebRTC)
+
+// Net always points at whichever peer implementation is active for the
+// current session — the real WebRTC Connection module for friend games,
+// or BotPeer (see js/bot.js) for solo vs-computer games. Both expose the
+// exact same send/onMessage/onOpen/... shape, so every other function in
+// this file (message protocol handling, turn flow, chat, reconnect UI)
+// talks to Net without needing to know or care which one is behind it.
+let Net = Connection;
+let sessionUiHandlersRegistered = false; // guards toolbar/chat/voiceline-FAB/settings listeners against double-registration on a Play Again rematch
 
 const COLORS = ['#1a1a22', '#e63946', '#f4a300', '#2a9d8f', '#3a86ff', '#8338ec', '#ff5c8a', '#ffffff'];
 
@@ -124,6 +134,7 @@ const nameInput = document.getElementById('input-name');
 const joinCodeInput = document.getElementById('input-join-code');
 const createBtn = document.getElementById('btn-create');
 const joinBtn = document.getElementById('btn-join');
+const playBotBtn = document.getElementById('btn-play-bot');
 const nameInputWrap = document.querySelector('.input-wrap');
 
 function refreshHomeButtonStates() {
@@ -132,12 +143,60 @@ function refreshHomeButtonStates() {
 
   createBtn.disabled = !hasName;
   joinBtn.disabled = !(hasName && hasValidCode);
+  playBotBtn.disabled = !hasName;
 
   // "ready" gives Join Room a visible highlight the moment it becomes
   // tappable, instead of just toggling opacity — makes it obvious the
   // code was accepted.
   joinBtn.classList.toggle('ready', hasName && hasValidCode);
 }
+
+// ---------- MODE TABS: Friend vs Computer, and Create vs Join ----------
+// Three tap targets that used to live crammed into one card (Create,
+// divider, Join) are now two separate decisions: which opponent, then —
+// only for the Friend path — which room action. Each tab swap is a pure
+// show/hide; no state is lost since the name field is shared across both.
+(function setupModeTabs() {
+  const tabFriend = document.getElementById('tab-mode-friend');
+  const tabBot = document.getElementById('tab-mode-bot');
+  const panelFriend = document.getElementById('panel-mode-friend');
+  const panelBot = document.getElementById('panel-mode-bot');
+
+  const subtabCreate = document.getElementById('subtab-create');
+  const subtabJoin = document.getElementById('subtab-join');
+  const subpanelCreate = document.getElementById('subpanel-create');
+  const subpanelJoin = document.getElementById('subpanel-join');
+
+  function selectMode(mode) {
+    const wantBot = mode === 'bot';
+    tabFriend.classList.toggle('active', !wantBot);
+    tabFriend.setAttribute('aria-selected', String(!wantBot));
+    tabBot.classList.toggle('active', wantBot);
+    tabBot.setAttribute('aria-selected', String(wantBot));
+    panelFriend.classList.toggle('hidden', wantBot);
+    panelBot.classList.toggle('hidden', !wantBot);
+  }
+
+  function selectSubtab(which) {
+    const wantJoin = which === 'join';
+    subtabCreate.classList.toggle('active', !wantJoin);
+    subtabCreate.setAttribute('aria-selected', String(!wantJoin));
+    subtabJoin.classList.toggle('active', wantJoin);
+    subtabJoin.setAttribute('aria-selected', String(wantJoin));
+    subpanelCreate.classList.toggle('active', !wantJoin);
+    subpanelJoin.classList.toggle('active', wantJoin);
+  }
+
+  tabFriend.addEventListener('click', () => selectMode('friend'));
+  tabBot.addEventListener('click', () => selectMode('bot'));
+  subtabCreate.addEventListener('click', () => selectSubtab('create'));
+  subtabJoin.addEventListener('click', () => selectSubtab('join'));
+
+  // A shared room link (?room=CODE) should land directly on the Join
+  // sub-tab with Create out of the way, same intent as the old
+  // create-button-hiding behavior, just expressed as a tab switch now.
+  window.__selectJoinSubtabForRoomLink = () => { selectMode('friend'); selectSubtab('join'); };
+})();
 
 nameInput.addEventListener('input', refreshHomeButtonStates);
 joinCodeInput.addEventListener('input', (e) => {
@@ -245,19 +304,18 @@ function nudgeNameField() {
 })();
 
 // If someone opened the app via a shared room link (?room=CODE), skip
-// straight to "join" mode — hide Create Room entirely so a distracted
-// friend can't accidentally start a brand new room instead of joining
-// the one they were invited to. Lock the code field too since it's
-// already correct; nothing to type there.
+// straight to the Friend > Join tab so a distracted friend can't
+// accidentally start a brand new room instead of joining the one they
+// were invited to. Lock the code field too since it's already correct;
+// nothing to type there.
 (function checkForRoomLinkOnLoad() {
   const params = new URLSearchParams(window.location.search);
   const roomFromLink = params.get('room');
   if (roomFromLink) {
     joinCodeInput.value = roomFromLink.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     joinCodeInput.readOnly = true;
-    createBtn.classList.add('hidden');
-    document.querySelector('.divider').classList.add('hidden');
     document.getElementById('join-hint').classList.remove('hidden');
+    if (window.__selectJoinSubtabForRoomLink) window.__selectJoinSubtabForRoomLink();
     refreshHomeButtonStates();
     nameInput.focus();
   }
@@ -269,6 +327,8 @@ createBtn.addEventListener('click', () => {
   if (createBtn.disabled) { nudgeNameField(); return; }
   myName = nameInput.value.trim();
   amHost = true;
+  isBotGame = false;
+  Net = Connection; // in case a previous session in this page load was vs the bot
   Connection.createRoom(
     (code) => {
       document.getElementById('room-code-display').textContent = code;
@@ -279,12 +339,12 @@ createBtn.addEventListener('click', () => {
     (err) => setStatus('Connection error: ' + err.type, true)
   );
 
-  Connection.onOpen(() => {
-    Connection.send({ type: 'hello', name: myName });
+  Net.onOpen(() => {
+    Net.send({ type: 'hello', name: myName });
     startGameSession();
   });
 
-  Connection.onMessage(handleMessage);
+  Net.onMessage(handleMessage);
 });
 
 joinBtn.addEventListener('click', () => {
@@ -295,18 +355,20 @@ joinBtn.addEventListener('click', () => {
   myName = nameInput.value.trim();
   const code = joinCodeInput.value.trim().toUpperCase();
   amHost = false;
+  isBotGame = false;
+  Net = Connection; // in case a previous session in this page load was vs the bot
   setStatus('Connecting...');
 
   Connection.joinRoom(code, (err) => {
     setStatus(err.type === 'timeout' ? 'Could not connect. Check the code.' : 'Connection failed: ' + err.type, true);
   });
 
-  Connection.onOpen(() => {
-    Connection.send({ type: 'hello', name: myName });
+  Net.onOpen(() => {
+    Net.send({ type: 'hello', name: myName });
     startGameSession();
   });
 
-  Connection.onMessage(handleMessage);
+  Net.onMessage(handleMessage);
 });
 
 document.getElementById('btn-copy-code').addEventListener('click', async () => {
@@ -345,8 +407,29 @@ document.getElementById('btn-share-link').addEventListener('click', async () => 
 });
 
 document.getElementById('btn-cancel-waiting').addEventListener('click', () => {
-  Connection.destroy();
+  Net.destroy();
   showScreen('home');
+});
+
+// ---------- PLAY WITH COMPUTER ----------
+// No room, no waiting screen, no PeerJS at all — BotPeer stands in for
+// Connection (see js/bot.js) so every message-protocol handler below
+// (handleMessage, startGameSession, chat/guess flow, etc.) runs completely
+// unchanged, believing it's talking to a real friend over WebRTC.
+playBotBtn.addEventListener('click', () => {
+  if (playBotBtn.disabled) { nudgeNameField(); return; }
+  myName = nameInput.value.trim();
+  amHost = true; // human is always turn-order authority in solo mode
+  isBotGame = true;
+  friendName = 'GuessArt Bot';
+  BotPeer.setBotName(friendName);
+  Net = BotPeer;
+
+  Net.onMessage(handleMessage);
+  Net.start(() => {
+    Net.send({ type: 'hello', name: myName });
+    startGameSession();
+  });
 });
 
 // ---------- GAME SESSION SETUP ----------
@@ -404,16 +487,34 @@ function handleMessage(data) {
       // This message only ever arrives at the GUESSER's client (the drawer
       // detects the match locally and doesn't send this to themselves).
       // So "guesserIsMe" is true here.
+      if (isBotGame) Game.markWordUsed(data.word); // bot was the drawer — keep it out of the human's future word pool too
       Game.endRoundGuessed(true);
       AudioFX.playCorrectGuess();
       showRoundResult(true, data.word);
       break;
     case 'timeout':
+      if (isBotGame) Game.markWordUsed(data.word);
       showRoundResult(false, data.word);
       break;
     case 'next_turn':
       // drawerIsMe is from the HOST's (sender's) perspective; flip for us.
       advanceTurn(!data.drawerIsMe);
+      break;
+    case 'rematch_request':
+      // Friend tapped Play Again on their game-over screen and is waiting
+      // on us. Auto-accept — there's no reason to make them wait on a
+      // confirmation dialog for a "run it back" request, and this mirrors
+      // the same auto-start flow the original room join already has.
+      Net.send({ type: 'rematch_accept' });
+      resetForRematch();
+      break;
+    case 'rematch_accept':
+      // Our own rematch request was accepted — start the new game now
+      // that we know the friend's client is restarting in lockstep.
+      if (rematchWaitingForFriend) {
+        rematchWaitingForFriend = false;
+        resetForRematch();
+      }
       break;
     case 'sync_state':
       // Sent by the host right after a reconnect. We deliberately only
@@ -459,16 +560,49 @@ function startGameSession() {
   showScreen('game');
 
   DrawCanvas.init(document.getElementById('draw-canvas'),
-    (stroke) => Connection.send(Object.assign({ type: 'stroke' }, stroke)),
-    (fillData) => Connection.send(Object.assign({ type: 'fill' }, fillData))
+    (stroke) => Net.send(Object.assign({ type: 'stroke' }, stroke)),
+    (fillData) => Net.send(Object.assign({ type: 'fill' }, fillData))
   );
 
-  setupToolbar();
-  setupChat();
-  setupVoicelineMenu();
-  setupReconnectHandling();
-  setupVoiceCall();
-  setupSettingsPanel();
+  // All of these wire up click listeners on DOM elements that live
+  // permanently inside #screen-game (toolbar buttons, chat input, the
+  // voiceline FAB, settings gear...) and never get removed/recreated
+  // between turns or rounds. A rematch (Play Again) calls
+  // startGameSession() again on the exact same elements — running these
+  // setup functions a second time would stack a second copy of every
+  // listener alongside the first, so e.g. one tap on "Fill" would fire
+  // twice, one chat send would submit the message twice, etc. Guarding
+  // them to first-call-only (same pattern already used for
+  // setupReconnectHandling/setupVoiceCall below) keeps rematches safe.
+  if (!sessionUiHandlersRegistered) {
+    sessionUiHandlersRegistered = true;
+    setupToolbar();
+    setupChat();
+    setupVoicelineMenu();
+    setupSettingsPanel();
+  } else {
+    // Toolbar's color/width selection and DrawCanvas's internal color
+    // state both reset to the same default every turn already (see
+    // DrawCanvas.setCanDraw()), but the swatch/width DOM highlighting
+    // itself isn't part of that reset — re-apply it here so a rematch
+    // doesn't visually start with last game's selected swatch/width.
+    document.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
+    document.querySelectorAll('.width-control .btn-icon').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-width-medium').classList.add('active');
+    DrawCanvas.setColor(COLORS[0]);
+    DrawCanvas.setWidth(4);
+  }
+
+  if (!isBotGame) {
+    // Reconnect banner and live mic/speaker voice only make sense when
+    // there's an actual second device on the other end of a WebRTC link —
+    // BotPeer never drops and has no audio stream to call.
+    setupReconnectHandling();
+    setupVoiceCall();
+  } else {
+    const voiceStrip = document.querySelector('.voice-strip');
+    if (voiceStrip) voiceStrip.classList.add('hidden');
+  }
 
   Game.beginGame(amHost);
   updateScoreLabels();
@@ -476,7 +610,7 @@ function startGameSession() {
   // Host decides and announces the first turn.
   if (amHost) {
     setTimeout(() => {
-      Connection.send({ type: 'start_turn', drawerIsMe: true }); // host draws first
+      Net.send({ type: 'start_turn', drawerIsMe: true }); // host draws first
       beginTurnLocal(true, null);
     }, 400);
   }
@@ -496,7 +630,7 @@ function setupReconnectHandling() {
   const bannerText = document.getElementById('reconnect-text');
   const friendDot = document.getElementById('friend-presence-dot');
 
-  Connection.onClose(() => {
+  Net.onClose(() => {
     friendDot.classList.remove('online');
     friendDot.classList.add('offline');
     banner.classList.remove('hidden');
@@ -504,11 +638,11 @@ function setupReconnectHandling() {
     addSystemChatMessage(`⚠️ ${friendName} disconnected. Trying to reconnect...`);
   });
 
-  Connection.onReconnecting((attempt, max) => {
+  Net.onReconnecting((attempt, max) => {
     bannerText.textContent = `Reconnecting... (${attempt}/${max})`;
   });
 
-  Connection.onReconnected(() => {
+  Net.onReconnected(() => {
     friendDot.classList.remove('offline');
     friendDot.classList.add('online');
     banner.classList.add('hidden');
@@ -520,7 +654,7 @@ function setupReconnectHandling() {
     // catches back up instead of looking frozen or out of sync.
     if (amHost) {
       const state = Game.getState();
-      Connection.send({
+      Net.send({
         type: 'sync_state',
         round: state.currentRound,
         totalRounds: state.TOTAL_ROUNDS,
@@ -532,7 +666,7 @@ function setupReconnectHandling() {
     }
   });
 
-  Connection.onReconnectFailed(() => {
+  Net.onReconnectFailed(() => {
     bannerText.textContent = 'Could not reconnect. Your friend may have left.';
   });
 }
@@ -541,14 +675,14 @@ function beginTurnLocal(iAmDrawer, _unused) {
   if (iAmDrawer) {
     const word = Game.startMyTurnAsDrawer();
     HintSystem.setupForDrawer(word, (index, letter) => {
-      Connection.send({ type: 'hint_reveal', index, letter });
+      Net.send({ type: 'hint_reveal', index, letter });
     });
     // Guesser needs the letter/space pattern to render blank tiles —
     // never the word itself.
-    Connection.send({ type: 'word_length', pattern: word.split('').map(ch => (ch === ' ' ? ' ' : 'L')).join('') });
+    Net.send({ type: 'word_length', pattern: word.split('').map(ch => (ch === ' ' ? ' ' : 'L')).join('') });
     HintSystem.revealEnds(); // instantly send first+last letter of each word segment
     ClueSystem.startForDrawer(word, (text) => {
-      Connection.send({ type: 'clue', text });
+      Net.send({ type: 'clue', text });
     });
   } else {
     Game.startMyTurnAsGuesser();
@@ -604,7 +738,7 @@ function onTimerTick(t) {
   if (t <= 0 && Game.isDrawerTurn()) {
     // Drawer's client is authoritative for timeout.
     const word = Game.getCurrentWord();
-    Connection.send({ type: 'timeout', word });
+    Net.send({ type: 'timeout', word });
     showRoundResult(false, word);
   }
 }
@@ -637,7 +771,7 @@ function showRoundResult(wasGuessed, word) {
       if (amHost) {
         const nextDrawerIsHost = (Game.getRoundNumber() % 2 === 0); // alternate turns
         advanceTurn(nextDrawerIsHost);
-        Connection.send({ type: 'next_turn', drawerIsMe: nextDrawerIsHost });
+        Net.send({ type: 'next_turn', drawerIsMe: nextDrawerIsHost });
       }
     }, 2500);
   } else {
@@ -673,9 +807,64 @@ function onGameEnd({ myScore, friendScore }) {
   showScreen('gameOver');
 }
 
+// ---------- PLAY AGAIN (REMATCH) ----------
+// Previously this button always tore down the connection and reloaded
+// the page — every game, win or lose, ended by kicking both players back
+// to Home and losing the room entirely, with no way to just run it back.
+// Now it restarts the SAME session in place: the WebRTC link (or the
+// BotPeer) stays alive, scores reset, and turn order flips so whoever
+// went second last game gets to draw first this time.
+let rematchWaitingForFriend = false;
+
+function resetForRematch() {
+  const btn = document.getElementById('btn-play-again');
+  btn.disabled = false;
+  btn.innerHTML = `<svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> Play Again`;
+  document.getElementById('screen-round-result').classList.remove('active');
+  Game.destroy();
+  startGameSession();
+}
+
 document.getElementById('btn-play-again').addEventListener('click', () => {
+  const btn = document.getElementById('btn-play-again');
+
+  if (isBotGame) {
+    // No second device to coordinate with — just restart immediately.
+    resetForRematch();
+    return;
+  }
+
+  if (!Net.isConnected()) {
+    // Friend isn't connected any more (they left / connection died) —
+    // Play Again can't do anything useful; send them home instead.
+    showScreen('home');
+    return;
+  }
+
+  // Ask the friend to rematch and wait for their confirmation, rather
+  // than unilaterally restarting local state while their client is still
+  // showing the old game-over screen. Whoever's already the host stays
+  // host so turn-order bookkeeping (amHost) doesn't need to renegotiate.
+  btn.disabled = true;
+  btn.innerHTML = 'Waiting for friend...';
+  rematchWaitingForFriend = true;
+  Net.send({ type: 'rematch_request' });
+
+  setTimeout(() => {
+    if (rematchWaitingForFriend) {
+      // Friend didn't respond in time (disconnected, or on an old
+      // client version) — don't leave the button stuck forever.
+      rematchWaitingForFriend = false;
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> Play Again`;
+      setStatus("Friend didn't respond — try again or go back home.", true);
+    }
+  }, 8000);
+});
+
+document.getElementById('btn-back-home').addEventListener('click', () => {
   VoiceCall.endCall();
-  Connection.destroy();
+  Net.destroy();
   Game.destroy();
   location.reload();
 });
@@ -740,13 +929,13 @@ function setupToolbar() {
   document.getElementById('btn-undo').addEventListener('click', () => {
     if (!Game.isDrawerTurn() || !DrawCanvas.hasHistory()) return;
     const remainingHistory = DrawCanvas.undo();
-    Connection.send({ type: 'undo', history: remainingHistory });
+    Net.send({ type: 'undo', history: remainingHistory });
   });
 
   document.getElementById('btn-clear-canvas').addEventListener('click', () => {
     if (!Game.isDrawerTurn()) return;
     DrawCanvas.clear();
-    Connection.send({ type: 'clear' });
+    Net.send({ type: 'clear' });
   });
 }
 
@@ -781,7 +970,7 @@ function setupVoicelineMenu() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       AudioFX.playVoiceline(v.id);
-      Connection.send({ type: 'voiceline', id: v.id });
+      Net.send({ type: 'voiceline', id: v.id });
       closeMenu();
     });
     menu.appendChild(btn);
@@ -895,6 +1084,11 @@ function setupSettingsPanel() {
     syncSettingsToggle('settings-sfx-toggle', AudioFX.isSfxOn ? AudioFX.isSfxOn() : true);
     syncSettingsToggle('settings-voicelines-toggle', AudioFX.isVoicelinesOn ? AudioFX.isVoicelinesOn() : true);
 
+    // No real peer, no mic/speaker to negotiate — hide the Voice section
+    // entirely for a bot game instead of showing controls that do nothing.
+    const voiceSection = document.getElementById('settings-voice-section');
+    if (voiceSection) voiceSection.classList.toggle('hidden', isBotGame);
+
     panel.classList.remove('hidden');
     backdrop.classList.remove('hidden');
   }
@@ -939,11 +1133,11 @@ function setupSettingsPanel() {
     const oldName = myName;
     myName = newName;
     updateScoreLabels();
-    Connection.send({ type: 'rename', name: myName, oldName });
+    Net.send({ type: 'rename', name: myName, oldName });
   });
 
   document.getElementById('btn-leave-game').addEventListener('click', () => {
-    Connection.destroy();
+    Net.destroy();
     VoiceCall.endCall();
     Game.destroy();
     location.reload();
@@ -986,7 +1180,7 @@ function setupChat() {
 function sendChat(text) {
   const msgId = 'm' + Date.now() + Math.floor(Math.random() * 1000);
   addChatMessage(myName, text, true, false, msgId);
-  Connection.send({ type: 'chat', text, name: myName, msgId });
+  Net.send({ type: 'chat', text, name: myName, msgId });
 }
 
 function handleIncomingChat(text, name, isMine, msgId) {
@@ -994,7 +1188,7 @@ function handleIncomingChat(text, name, isMine, msgId) {
 
   // Acknowledge we've seen it, so the sender's ticks turn blue.
   if (msgId) {
-    Connection.send({ type: 'seen', msgId });
+    Net.send({ type: 'seen', msgId });
   }
 
   // If I'm the drawer, check if this incoming guess matches my word.
@@ -1003,7 +1197,7 @@ function handleIncomingChat(text, name, isMine, msgId) {
     if (isCorrect) {
       const word = Game.getCurrentWord();
       addCorrectGuessMessage(`🎉 ${name} guessed it! The word was "${word}"`);
-      Connection.send({ type: 'correct_guess', word });
+      Net.send({ type: 'correct_guess', word });
       // We are the drawer here, so guesserIsMe = false (friend gets guesser points, we get drawer points).
       Game.endRoundGuessed(false);
       AudioFX.playCorrectGuess();

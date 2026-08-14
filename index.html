@@ -166,6 +166,26 @@
     <symbol id="icon-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
     </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="icon-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="9" width="16" height="11" rx="2"/>
+      <path d="M12 9V5"/>
+      <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="9" cy="14" r="1.3" fill="currentColor" stroke="none"/>
+      <circle cx="15" cy="14" r="1.3" fill="currentColor" stroke="none"/>
+      <path d="M8 18h8"/>
+      <path d="M1 13v3"/>
+      <path d="M23 13v3"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+      <path d="M21 4v5h-5"/>
+    </symbol>
   </svg>
 
   <!-- ================================================================
@@ -213,11 +233,49 @@
         </span>
       </div>
 
-      <button id="btn-create" class="btn btn-primary" disabled>Create Room</button>
-      <div class="divider"><span>or</span></div>
-      <p id="join-hint" class="join-hint hidden"><svg class="icon icon-inline" width="14" height="14"><use href="#icon-pencil"/></svg> You've been invited to a room!</p>
-      <input id="input-join-code" type="text" placeholder="ROOM CODE" maxlength="6" autocomplete="off" autocapitalize="characters">
-      <button id="btn-join" class="btn btn-secondary" disabled>Join Room</button>
+      <!-- Mode picker: choosing between a real friend (needs a room) and
+           the computer (starts instantly, no networking at all) used to
+           be impossible to express since Create/Join sat in one card with
+           no concept of "against who" — this tab strip is the actual
+           top-level choice, and each mode's own controls render below it. -->
+      <div class="mode-tabs" role="tablist">
+        <button id="tab-mode-friend" class="mode-tab active" role="tab" aria-selected="true">
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-users"/></svg> Play with Friend
+        </button>
+        <button id="tab-mode-bot" class="mode-tab" role="tab" aria-selected="false">
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> Play with Computer
+        </button>
+      </div>
+
+      <!-- FRIEND MODE: Create and Join are now their own sub-tabs instead
+           of being stacked in the same view — picking one hides the other
+           entirely so there's no ambiguity about which action a tap does. -->
+      <div id="panel-mode-friend" class="mode-panel">
+        <div class="subtabs" role="tablist">
+          <button id="subtab-create" class="subtab active" role="tab" aria-selected="true">Create Room</button>
+          <button id="subtab-join" class="subtab" role="tab" aria-selected="false">Join Room</button>
+        </div>
+
+        <div id="subpanel-create" class="subpanel active">
+          <p class="mode-hint">Start a new room and share the code with your friend.</p>
+          <button id="btn-create" class="btn btn-primary" disabled>Create Room</button>
+        </div>
+
+        <div id="subpanel-join" class="subpanel">
+          <p id="join-hint" class="join-hint hidden"><svg class="icon icon-inline" width="14" height="14"><use href="#icon-pencil"/></svg> You've been invited to a room!</p>
+          <input id="input-join-code" type="text" placeholder="ROOM CODE" maxlength="6" autocomplete="off" autocapitalize="characters">
+          <button id="btn-join" class="btn btn-secondary" disabled>Join Room</button>
+        </div>
+      </div>
+
+      <!-- COMPUTER MODE: single tap, no code/waiting screen needed since
+           there's no second device to connect to. -->
+      <div id="panel-mode-bot" class="mode-panel hidden">
+        <p class="mode-hint">Draw and guess against the GuessArt bot — no friend needed, starts instantly.</p>
+        <button id="btn-play-bot" class="btn btn-primary" disabled>
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> Play vs Computer
+        </button>
+      </div>
     </div>
 
     <p id="status-msg" class="status-msg"></p>
@@ -436,7 +494,7 @@
         <button id="btn-settings-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
       </div>
 
-      <div class="settings-section">
+      <div class="settings-section" id="settings-voice-section">
         <p class="settings-label">Voice</p>
         <div class="settings-row">
           <span>Microphone</span>
@@ -494,7 +552,15 @@
         <div><span id="final-my-score">0</span><small id="final-my-label">You</small></div>
         <div><span id="final-friend-score">0</span><small id="final-friend-label">Friend</small></div>
       </div>
-      <button id="btn-play-again" class="btn btn-primary">Back to Home</button>
+      <!-- Play Again keeps the same connection alive (real friend: same
+           room/peer link; bot: same in-memory bot) and restarts the game
+           loop in place, instead of the old behavior of unconditionally
+           tearing everything down and reloading the page back to Home —
+           that killed the room/contact every single time a game finished. -->
+      <button id="btn-play-again" class="btn btn-primary">
+        <svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> Play Again
+      </button>
+      <button id="btn-back-home" class="btn btn-ghost">Back to Home</button>
     </div>
   </div>
 
@@ -504,6 +570,7 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="js/words.js"></script>
   <script src="js/connection.js"></script>
+  <script src="js/bot.js"></script>
   <script src="js/canvas.js"></script>
   <script src="js/game.js"></script>
   <script src="js/hints.js"></script>

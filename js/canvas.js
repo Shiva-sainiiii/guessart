@@ -222,6 +222,8 @@ const DrawCanvas = (() => {
     currentGesture = null;
   }
 
+  let initialized = false; // guards against stacking duplicate listeners if init() is called again (e.g. Play Again rematch reusing the same <canvas>)
+
   return {
     init(canvasEl, strokeCallback, fillCallback) {
       canvas = canvasEl;
@@ -236,6 +238,17 @@ const DrawCanvas = (() => {
       // hasn't actually changed, so this can't wipe existing strokes.
       resizeCanvas();
       requestAnimationFrame(resizeCanvas);
+
+      // Everything below (ResizeObserver, window resize listener, pointer
+      // listeners) only needs to be wired ONCE per <canvas> element — a
+      // rematch (Play Again) calls init() again on the very same element
+      // with fresh strokeCallback/fillCallback closures (captured above),
+      // but re-running addEventListener/observe here would stack a second
+      // copy alongside the first, so every future stroke would draw twice,
+      // fills would double-toggle, etc. Guard so only the first init()
+      // call for this page load actually attaches listeners.
+      if (initialized) return;
+      initialized = true;
 
       // .canvas-wrap's height comes from a flex:1 parent (.game-panel-mid)
       // that settles AFTER its siblings' content is known (word-banner

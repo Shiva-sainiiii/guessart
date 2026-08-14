@@ -145,6 +145,17 @@ const Game = (() => {
     getRoundNumber() { return currentRound; },
     getTotalRounds() { return TOTAL_ROUNDS; },
     isRoundActive() { return roundActive; },
+    // Exposed so a solo vs-computer session (see js/bot.js) can avoid
+    // picking a word for the bot's turn that the human already drew
+    // earlier in the same game.
+    getUsedWords() { return usedWords.slice(); },
+    // The reverse direction: called once a round the BOT drew ends and
+    // its secret word is revealed to the human (via 'correct_guess' or
+    // 'timeout'), so a later human-drawer turn in the same game doesn't
+    // pick the exact word the bot already used.
+    markWordUsed(word) {
+      if (word && !usedWords.includes(word)) usedWords.push(word);
+    },
 
     destroy() {
       clearInterval(timerInterval);

@@ -5,6 +5,47 @@ Peer-to-peer via WebRTC (PeerJS) — no backend, no database.
 
 _Formerly known as Sketch Duel — renamed to GuessArt._
 
+## Phase 2.9: Play Again, separated Create/Join, and Play with Computer
+
+- **Play Again (rematch)**: the game-over screen previously only had a
+  "Back to Home" button disguised with the old label, which tore down
+  the WebRTC connection and reloaded the page every single time a game
+  finished — losing the room and disconnecting from your friend even
+  if you both wanted to play again. Now there are two real buttons:
+  **Play Again** restarts the same session in place (same room / same
+  bot, scores reset, turn order flips) via a small `rematch_request` /
+  `rematch_accept` handshake so both clients restart in lockstep, and
+  **Back to Home** keeps the old full-reset behavior for when you
+  actually want to leave.
+- **Create Room and Join Room are separate now**: the home screen used
+  to stack both actions in one card with a plain "or" divider between
+  them. They're now two distinct sub-tabs under a "Play with Friend"
+  mode — picking one fully hides the other, so there's no ambiguity
+  about which button does what.
+- **Play with Computer**: a brand new top-level mode next to "Play
+  with Friend". No room code, no second device — starts instantly
+  against an offline, rule-based bot (`js/bot.js`) that plays BOTH
+  roles depending on whose turn it is:
+  - **As drawer**, it picks a word and paints a recognizable sketch
+    using a small library of hand-built shape templates for common
+    words, falling back to category-based generic sketches (animal,
+    food, "person doing an action", landscape, small object) for every
+    other word in `js/words.js`, so no word ever draws a blank canvas.
+  - **As guesser**, it reads the same word-length pattern, revealed
+    letters, and rotating clue text a human guesser would see, and
+    scores every remaining candidate word by pattern-fit + clue
+    keyword overlap to send a guess — with human-like randomized
+    timing so it doesn't feel like a reflex.
+  - Architecturally, `BotPeer` implements the exact same interface as
+    the real `Connection` module (`send`/`onMessage`/`onOpen`/...), so
+    every existing piece of turn/chat/hint/clue protocol handling in
+    `app.js` runs completely unchanged — it has no idea whether it's
+    talking to a friend over WebRTC or a local bot.
+  - No API key, no network calls — fully offline. A real AI-backed
+    brain (OpenRouter or similar) is a natural next step: it would only
+    need to replace `BotBrain.chooseGuess()` / `BotBrain.planDrawing()`
+    internals, the `BotPeer` wiring around it stays the same.
+
 ## Phase 2.3: Rotating text clues + polished home screen + meme voicelines
 
 - **Rotating text clues**: every word in `js/words.js` now carries 2-3
