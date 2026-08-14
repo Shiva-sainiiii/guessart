@@ -393,7 +393,15 @@ const BotBrain = (() => {
     if (typeof WORD_LIST === 'undefined') return null;
     const clueSet = new Set(state.clueWords);
 
-    let best = null, bestScore = -Infinity;
+    // Collect all candidates tied for the best score instead of freezing
+    // on the first word in WORD_LIST — with no clues yet, every word
+    // scores 0, and `score > bestScore` never fires past the first
+    // element, so the bot always "guessed" WORD_LIST[0] ("chair") no
+    // matter what the actual word was. We now gather all ties and pick
+    // randomly among them, so early-round guesses vary and only narrow
+    // down once real clue/pattern signal comes in.
+    let bestScore = -Infinity;
+    let bestPool = [];
     for (const entry of WORD_LIST) {
       const w = entry.word.toLowerCase();
       if (state.triedGuesses.has(w)) continue;
@@ -420,9 +428,15 @@ const BotBrain = (() => {
       // guaranteed above, but rewards longer confirmed matches).
       score += Object.keys(state.revealed).length * 0.1;
 
-      if (score > bestScore) { bestScore = score; best = w; }
+      if (score > bestScore) {
+        bestScore = score;
+        bestPool = [w];
+      } else if (score === bestScore) {
+        bestPool.push(w);
+      }
     }
-    return best;
+    if (bestPool.length === 0) return null;
+    return bestPool[Math.floor(Math.random() * bestPool.length)];
   }
 
   // ---- LLM-backed guess (falls back to bestCandidate on any failure) ----

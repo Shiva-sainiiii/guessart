@@ -113,21 +113,39 @@ async function callOpenRouter(messages, maxTokens) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://guessart.vercel.app',
-      'X-Title': 'GuessArt Bot',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      max_tokens: maxTokens,
-      temperature: 0.8,
-    }),
-  });
+  // The free Nemotron model on OpenRouter can queue for a long time.
+  // Without an internal timeout, a slow response gets hard-killed by
+  // Vercel's platform timeout instead of failing gracefully here, which
+  // is what was showing up as bare 502s in the logs. Abort at 18s so we
+  // always have time to return a clean JSON error response ourselves
+  // (well under the 25s maxDuration set in vercel.json).
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000);
+
+  let res;
+  try {
+    res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://guessart.vercel.app',
+        'X-Title': 'GuessArt Bot',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        max_tokens: maxTokens,
+        temperature: 0.8,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('OpenRouter request timed out after 18s');
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
