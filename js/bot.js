@@ -369,17 +369,31 @@ const BotBrain = (() => {
     }
   }
 
-  // ---- Guessing brain ----
+  // ---- Guessing brain (fully local — no network calls) ----
   // Tracks what the bot currently knows about the secret word: the
   // letter/space pattern, any letters revealed so far, and every clue
-  // sentence it's received. Produces a best-effort guess string.
-  function makeGuesserState() {
-    return {
-      pattern: null,        // e.g. "LLLLL"
-      revealed: {},         // index -> letter
-      clueWords: [],         // keyword pool harvested from clue sentences
-      triedGuesses: new Set(),
-    };
+  // sentence it's received. Produces a "thinking" performance: a small,
+  // random number of plausible-but-wrong guesses first, then the real
+  // answer once the bot has legitimately narrowed the word list down to
+  // it via pattern + revealed letters — never by peeking at the actual
+  // secret word, which this client never receives (see BotPeer below).
+
+  // WORD_LIST is laid out in fixed category blocks (see js/words.js).
+  // These boundary indices mirror that file's section comments, so wrong
+  // guesses can be drawn from the SAME category as the true answer once
+  // one is known, which reads as far more "thinking" than a random word.
+  const CATEGORY_BOUNDS = [
+    { name: 'objects', start: 0, end: 30 },
+    { name: 'animals', start: 30, end: 63 },
+    { name: 'food', start: 63, end: 88 },
+    { name: 'nature', start: 88, end: 111 },
+    { name: 'actions', start: 111, end: 132 },
+    { name: 'fantasy', start: 132, end: 153 },
+    { name: 'india', start: 153, end: 999 },
+  ];
+  function categoryOf(index) {
+    const hit = CATEGORY_BOUNDS.find(c => index >= c.start && index < c.end);
+    return hit ? hit.name : 'objects';
   }
 
   const STOPWORDS = new Set(['it', 'its', 'a', 'an', 'the', 'you', 'your', 'is', 'are', 'to', 'in', 'on', 'at', 'of',
@@ -387,95 +401,148 @@ const BotBrain = (() => {
     'people', 'can', 'used', 'use', 'for', 'like', 'from', 'up', 'down', 'over', 'not', 'be', 'as', 'when',
     'than', 'their', 'were', 'was', 'do', 'does', 'many', 'most', 'some', 'without', 'before', 'after']);
 
-  // Score every candidate word in the full list against the pattern +
-  // clue keyword overlap, returning the best match the bot hasn't tried yet.
-  function bestCandidate(state) {
-    if (typeof WORD_LIST === 'undefined') return null;
-    const clueSet = new Set(state.clueWords);
-
-    // Collect all candidates tied for the best score instead of freezing
-    // on the first word in WORD_LIST — with no clues yet, every word
-    // scores 0, and `score > bestScore` never fires past the first
-    // element, so the bot always "guessed" WORD_LIST[0] ("chair") no
-    // matter what the actual word was. We now gather all ties and pick
-    // randomly among them, so early-round guesses vary and only narrow
-    // down once real clue/pattern signal comes in.
-    let bestScore = -Infinity;
-    let bestPool = [];
-    for (const entry of WORD_LIST) {
-      const w = entry.word.toLowerCase();
-      if (state.triedGuesses.has(w)) continue;
-      if (state.pattern) {
-        const norm = w.replace(/\s+/g, '');
-        const patLetters = state.pattern.replace(/\s+/g, '');
-        if (norm.length !== patLetters.length) continue;
-        // Must match every already-revealed letter position exactly.
-        let ok = true;
-        let flatIdx = 0;
-        for (let i = 0; i < state.pattern.length; i++) {
-          if (state.pattern[i] === ' ') continue;
-          if (state.revealed[i] && state.revealed[i].toLowerCase() !== norm[flatIdx]) { ok = false; break; }
-          flatIdx++;
-        }
-        if (!ok) continue;
-      }
-      // Keyword overlap score: how many of this candidate's own clue
-      // words appear in the clues the bot has actually received.
-      const candClues = (entry.clues || []).join(' ').toLowerCase().match(/[a-z]+/g) || [];
-      let score = 0;
-      candClues.forEach(t => { if (clueSet.has(t) && !STOPWORDS.has(t)) score += 1; });
-      // Small tie-break bonus for revealed-letter matches (already
-      // guaranteed above, but rewards longer confirmed matches).
-      score += Object.keys(state.revealed).length * 0.1;
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestPool = [w];
-      } else if (score === bestScore) {
-        bestPool.push(w);
-      }
-    }
-    if (bestPool.length === 0) return null;
-    return bestPool[Math.floor(Math.random() * bestPool.length)];
+  function makeGuesserState() {
+    return {
+      pattern: null,          // e.g. "LLLLL"
+      revealed: {},           // index -> letter
+      clueWords: [],          // keyword pool harvested from clue sentences
+      triedGuesses: new Set(),
+      plannedWrongCount: null,  // rolled once per round on first tick
+      wrongGuessesMade: 0,
+      knownAnswer: null,        // set once pattern+letters narrow to exactly 1 candidate
+    };
   }
 
-  // ---- LLM-backed guess (falls back to bestCandidate on any failure) ----
-  // Sends the bot's current knowledge (pattern/revealed/clues/tried) to
-  // the serverless endpoint and asks for one best-guess word. Runs
-  // alongside bestCandidate() as a safety net: if the LLM call fails,
-  // times out, returns PASS, or repeats something already tried, we
-  // fall straight through to the deterministic keyword-scoring guess
-  // instead of the bot going silent for that tick.
-  async function chooseGuessSmart(state) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 7000);
-      const res = await fetch('/api/bot-brain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'guess',
-          pattern: state.pattern,
-          revealed: state.revealed,
-          clues: state.clueWords.length ? [state.clueWords.join(' ')] : [],
-          tried: Array.from(state.triedGuesses),
-        }),
-        signal: controller.signal,
+  // All WORD_LIST entries that still fit the current pattern length and
+  // every already-revealed letter position. This is legitimate — the
+  // bot is only using information it was actually sent over the wire.
+  function fittingCandidates(state) {
+    if (typeof WORD_LIST === 'undefined' || !state.pattern) return [];
+    const patLetters = state.pattern.replace(/\s+/g, '');
+    const out = [];
+    WORD_LIST.forEach((entry, idx) => {
+      const w = entry.word.toLowerCase();
+      const norm = w.replace(/\s+/g, '');
+      if (norm.length !== patLetters.length) return;
+      let ok = true, flatIdx = 0;
+      for (let i = 0; i < state.pattern.length; i++) {
+        if (state.pattern[i] === ' ') continue;
+        if (state.revealed[i] && state.revealed[i].toLowerCase() !== norm[flatIdx]) { ok = false; break; }
+        flatIdx++;
+      }
+      if (ok) out.push({ word: w, index: idx, entry });
+    });
+    return out;
+  }
+
+  // Keyword-overlap score against clues received so far — used only to
+  // rank/flavor guesses, never to invent letters the bot wasn't shown.
+  function clueScore(entry, clueSet) {
+    const candClues = (entry.clues || []).join(' ').toLowerCase().match(/[a-z]+/g) || [];
+    let score = 0;
+    candClues.forEach(t => { if (clueSet.has(t) && !STOPWORDS.has(t)) score += 1; });
+    return score;
+  }
+
+  // Picks a believable WRONG guess: prefers the same category as the
+  // true answer (once known) or the same category as whatever's
+  // currently highest-scoring, same rough word length, never something
+  // already tried, and never the true answer itself.
+  function pickWrongGuess(state) {
+    if (typeof WORD_LIST === 'undefined') return null;
+    const clueSet = new Set(state.clueWords);
+    const fitting = fittingCandidates(state);
+
+    // Prefer decoys from the same category as the current best-scoring
+    // fitting candidate (proxy for "what the bot is leaning toward"),
+    // falling back to the whole list if pattern hasn't arrived yet.
+    let anchorCategory = null;
+    if (fitting.length) {
+      let best = null, bestScore = -Infinity;
+      fitting.forEach(c => {
+        const s = clueScore(c.entry, clueSet);
+        if (s > bestScore) { bestScore = s; best = c; }
       });
-      clearTimeout(timeout);
-      if (!res.ok) throw new Error('bot-brain guess request failed: ' + res.status);
-      const data = await res.json();
-      const guess = (data.guess || '').trim().toLowerCase();
-      if (guess && !state.triedGuesses.has(guess)) {
+      if (best) anchorCategory = categoryOf(best.index);
+    }
+
+    const pool = WORD_LIST
+      .map((entry, idx) => ({ entry, idx }))
+      .filter(({ entry, idx }) => {
+        const w = entry.word.toLowerCase();
+        if (state.triedGuesses.has(w)) return false;
+        if (state.knownAnswer && w === state.knownAnswer) return false;
+        if (anchorCategory && categoryOf(idx) !== anchorCategory) return false;
+        return true;
+      });
+
+    const finalPool = pool.length ? pool : WORD_LIST
+      .map((entry, idx) => ({ entry, idx }))
+      .filter(({ entry }) => !state.triedGuesses.has(entry.word.toLowerCase()));
+
+    if (!finalPool.length) return null;
+    const pick = finalPool[Math.floor(Math.random() * finalPool.length)];
+    return pick.entry.word.toLowerCase();
+  }
+
+  // Decide what (if anything) to say on this guess tick. Returns a
+  // string to send, or null to stay quiet — synchronous, instant,
+  // no network involved at all.
+  function chooseGuessLocal(state) {
+    // Roll the "how many wrong guesses before the real one" script once,
+    // the first time this round actually has enough signal to act on
+    // (no point rolling before word_length even arrives).
+    if (state.plannedWrongCount === null && state.pattern) {
+      const r = Math.random();
+      state.plannedWrongCount = r < 0.40 ? 0 : (r < 0.75 ? 1 : 2);
+    }
+
+    const fitting = fittingCandidates(state);
+    if (fitting.length === 1) {
+      state.knownAnswer = fitting[0].word;
+    } else if (fitting.length > 1 && state.clueWords.length) {
+      // Pattern narrowed it to a short list but not a single word —
+      // once clue text has arrived, break the tie by keyword overlap
+      // instead of stalling forever waiting for a unique letter match.
+      // Still fully legitimate: only using clues/letters actually sent.
+      const clueSet = new Set(state.clueWords);
+      let best = null, bestScore = -Infinity;
+      fitting.forEach(c => {
+        const s = clueScore(c.entry, clueSet);
+        if (s > bestScore) { bestScore = s; best = c; }
+      });
+      if (best && bestScore > 0) state.knownAnswer = best.word;
+    }
+
+    // If the bot has legitimately narrowed it to one word AND has
+    // already "used up" its planned wrong guesses, commit to the answer.
+    if (state.knownAnswer && state.wrongGuessesMade >= (state.plannedWrongCount || 0)) {
+      const answer = state.knownAnswer;
+      if (!state.triedGuesses.has(answer)) {
+        state.triedGuesses.add(answer);
+        return answer;
+      }
+    }
+
+    // Otherwise, if we still owe the script a wrong guess, throw one out
+    // — but only once pattern has arrived, so it doesn't fire on turn 0.
+    if (state.pattern && state.wrongGuessesMade < (state.plannedWrongCount || 0)) {
+      const guess = pickWrongGuess(state);
+      if (guess) {
         state.triedGuesses.add(guess);
+        state.wrongGuessesMade += 1;
         return guess;
       }
-      // LLM passed or repeated — fall back to deterministic candidate.
-      return bestCandidate(state);
-    } catch (err) {
-      console.warn('[BotBrain] LLM guess failed, using keyword-scoring fallback:', err.message || err);
-      return bestCandidate(state);
     }
+
+    // Known answer but still "owed" wrong guesses and couldn't find a
+    // decoy (small word list edge case) — just answer rather than stall.
+    if (state.knownAnswer && !state.triedGuesses.has(state.knownAnswer)) {
+      state.triedGuesses.add(state.knownAnswer);
+      return state.knownAnswer;
+    }
+
+    return null; // nothing to say yet this tick
   }
 
   return {
@@ -507,20 +574,9 @@ const BotBrain = (() => {
     },
 
     // Decide whether/what to guess right now. Returns a string to send as
-    // a chat guess, or null to stay quiet this tick (keeps the bot from
-    // spamming a guess every single second). Deterministic — instant.
+    // a chat guess, or null to stay quiet this tick. Fully local/instant.
     chooseGuess(state) {
-      const guess = bestCandidate(state);
-      if (!guess) return null;
-      state.triedGuesses.add(guess);
-      return guess;
-    },
-
-    // Async LLM-backed version of chooseGuess. Always resolves (never
-    // rejects); returns null only if neither the LLM nor the fallback
-    // scorer has a candidate left.
-    chooseGuessSmart(state) {
-      return chooseGuessSmart(state);
+      return chooseGuessLocal(state);
     },
   };
 })();
@@ -632,17 +688,25 @@ const BotPeer = (() => {
   }
 
   // Bot-as-guesser: periodically evaluate whether it has enough signal
-  // to take a guess, with human-like variable timing (not every second).
-  // Each tick asks the LLM-backed guesser (which itself falls back to
-  // the deterministic keyword scorer on any failure), so a guess is
-  // always eventually offered even if OpenRouter is down or rate-limited.
+  // to take a guess, with human-like variable timing. Fully local and
+  // synchronous now — no network call, so this can never 502 or stall.
+  // Early ticks are slower (bot is "reading" clues); once it has
+  // legitimately narrowed the word down via pattern + revealed letters
+  // it still waits out any scripted decoy guesses before committing,
+  // which reads as the bot "thinking" rather than insta-solving.
   function startBotGuessing() {
     guesserState = BotBrain.newGuesserState();
+    let tickCount = 0;
     function tick() {
-      const delay = 4000 + Math.random() * 5000;
-      guessTimer = setTimeout(async () => {
-        const guess = await BotBrain.chooseGuessSmart(guesserState);
-        if (roundOver) return; // round ended while the guess call was in flight
+      tickCount += 1;
+      // First tick waits a bit longer (word_length/first clue need to
+      // arrive first); later ticks are a touch snappier.
+      const base = tickCount === 1 ? 5000 : 3500;
+      const delay = base + Math.random() * 4000;
+      guessTimer = setTimeout(() => {
+        if (roundOver) return;
+        const guess = BotBrain.chooseGuess(guesserState);
+        if (roundOver) return;
         if (guess) {
           emit({ type: 'chat', text: guess, name: botName, msgId: 'bot' + Date.now() });
         }
@@ -699,6 +763,29 @@ const BotPeer = (() => {
               clearTimeout(roundTimeoutTimer);
               emit({ type: 'correct_guess', word: secretWord });
             }
+          }
+          break;
+        case 'word_length':
+          // Human (drawer) told us the letter/space pattern. This was
+          // previously dropped entirely — guesserState.pattern stayed
+          // null for the whole round, every round, which meant the
+          // guessing engine's pattern-length filtering almost never
+          // actually engaged. Feed it into the live guesser state.
+          if (!botIsDrawer && guesserState) {
+            BotBrain.ingestPattern(guesserState, data.pattern);
+          }
+          break;
+        case 'hint_reveal':
+          // Human (drawer) revealed one letter. Same story — this never
+          // reached the bot's guesser state before.
+          if (!botIsDrawer && guesserState) {
+            BotBrain.ingestReveal(guesserState, data.index, data.letter);
+          }
+          break;
+        case 'clue':
+          // Human (drawer) sent a rotating text clue.
+          if (!botIsDrawer && guesserState) {
+            BotBrain.ingestClue(guesserState, data.text);
           }
           break;
         case 'clear':

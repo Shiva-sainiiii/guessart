@@ -1,12 +1,15 @@
 // ===== api/bot-brain.js — Vercel serverless function =====
 // Proxies OpenRouter chat-completions so the API key never reaches the
-// browser. Two modes, selected by `mode` in the POST body:
-//   - "draw"  : given a word, return a JSON list of stroke primitives
-//   - "guess" : given pattern/revealed letters/clues/tried guesses, return one guess word
+// browser. One mode now: "draw" — given a word, return a JSON list of
+// stroke primitives for the bot-as-drawer to paint out.
 //
-// Both modes ask the model for JSON-only output and validate it before
-// returning, so a malformed/partial LLM response can never break the
-// frontend's drawing pacer or reveal something unexpected in chat.
+// Guessing used to also go through here ("guess" mode), but that path
+// was removed: it was slow (network round-trip per guess tick), flaky
+// (free-tier OpenRouter rate limits caused frequent 502s), and the
+// bot-as-guesser doesn't actually need an LLM — it only ever sees the
+// pattern/revealed-letters/clues a real human guesser would see, and a
+// local word-list match against that signal is both instant and fair.
+// See js/bot.js's chooseGuess()/chooseGuessLocal() for the replacement.
 
 const MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -30,27 +33,6 @@ Rules:
 - Use black (#1a1a22) for outlines; you may use one accent color (e.g. "#e63946" red, "#3a86ff" blue, "#f4a300" orange, "#2a9d8f" teal) for a single distinguishing detail if the object has an obvious signature color.
 - Never write any text, letters, or numbers in the drawing.
 - Output nothing except the JSON array.`;
-}
-
-function guessSystemPrompt() {
-  return `You are playing the guessing role in a Skribbl-style drawing game. You are given the current known letter pattern, any confirmed letters, clue sentences received so far, and guesses already tried (which were wrong). Reply with ONLY the single word or short phrase you think is the answer — nothing else, no punctuation, no explanation. If you have no reasonable guess yet, reply with exactly: PASS`;
-}
-
-function buildGuessUserPrompt({ pattern, revealed, clues, tried }) {
-  const patternStr = pattern || '(unknown length)';
-  const revealedStr = revealed && Object.keys(revealed).length
-    ? Object.entries(revealed).map(([i, ch]) => `position ${i}: "${ch}"`).join(', ')
-    : 'none yet';
-  const cluesStr = clues && clues.length ? clues.map((c, i) => `${i + 1}. ${c}`).join('\n') : '(none yet)';
-  const triedStr = tried && tried.length ? tried.join(', ') : 'none';
-
-  return `Letter pattern (spaces = word breaks, each letter = one blank): ${patternStr}
-Revealed letters: ${revealedStr}
-Clues received so far:
-${cluesStr}
-Already-tried wrong guesses (do not repeat these): ${triedStr}
-
-What is your single best guess right now?`;
 }
 
 // ---- Validation helpers ----
@@ -187,20 +169,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ beats });
     }
 
-    if (body.mode === 'guess') {
-      const raw = await callOpenRouter([
-        { role: 'system', content: guessSystemPrompt() },
-        { role: 'user', content: buildGuessUserPrompt(body) },
-      ], 30);
-
-      const guess = String(raw || '').trim().replace(/^["'.]+|["'.]+$/g, '').toLowerCase();
-      if (!guess || guess === 'pass' || guess.length > 40) {
-        return res.status(200).json({ guess: null });
-      }
-      return res.status(200).json({ guess });
-    }
-
-    return res.status(400).json({ error: 'mode must be "draw" or "guess"' });
+    return res.status(400).json({ error: 'mode must be "draw"' });
   } catch (err) {
     return res.status(502).json({ error: String(err.message || err) });
   }
