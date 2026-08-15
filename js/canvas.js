@@ -58,10 +58,35 @@ const DrawCanvas = (() => {
   // x,y come in as normalized (0-1) coordinates, same as strokes, so fills
   // sync and replay identically regardless of each player's canvas size.
   //
-  // Wrapped defensively: getImageData/putImageData can throw (e.g. a
-  // zero-size canvas mid-resize, or a transient "not enough memory" on
-  // very old phones) and a silent failure here is much better than
-  // taking down the whole draw loop.
+  // TOLERANCE-BASED MATCHING (not exact-color): canvas strokes are
+  // anti-aliased — the pixels right along a drawn outline are a partial
+  // blend between the stroke color and the background, not a pure exact
+  // match to either. An exact-equality flood fill (old behavior) treats
+  // every one of those semi-transparent edge pixels as "not the
+  // background", which sounds safe but actually works AGAINST
+  // containment: on a thin or slightly-open outline (any 1-2px gap from
+  // a stroke that didn't quite close, common with the hand-authored
+  // multi-point sketches in js/drawings.js, or just a fast finger-drawn
+  // line on a real player's screen), the fill has no "wall" of matching
+  // background pixels to stop at right at that gap — it finds one
+  // non-matching pixel, stops expanding through the strict boundary
+  // test in the wrong place, or worse, the anti-aliased ring right
+  // outside a THIN outline still counts as "background" (since it's
+  // barely tinted) and the flood walks straight through it, spilling
+  // color across the entire canvas. This is the exact "fill leaks
+  // everywhere" bug.
+  //
+  // The fix used by every real paint-bucket tool: treat any pixel within
+  // a small color-distance TOLERANCE of the start pixel as fillable
+  // (handles anti-aliased near-background pixels near a gap the same
+  // way exact background is handled), and separately treat any pixel
+  // that's reasonably close in color to the FILL color itself as "already
+  // there" so re-flooding a spot doesn't infinite-loop. Distance is
+  // computed once per pixel with cheap integer math (no sqrt needed
+  // since we're only comparing against a squared threshold).
+  const FILL_TOLERANCE = 60; // squared-distance-free per-channel-ish budget; see colorDist below
+  const FILL_TOLERANCE_SQ = FILL_TOLERANCE * FILL_TOLERANCE;
+
   function floodFillRaw(nx, ny, colorHex) {
     try {
       const rect = canvas.getBoundingClientRect();
@@ -88,39 +113,53 @@ const DrawCanvas = (() => {
       const startIdx = (startY * w + startX) * 4;
       const startR = data[startIdx], startG = data[startIdx + 1], startB = data[startIdx + 2], startA = data[startIdx + 3];
 
-      // Already filled with this exact color — nothing to do.
-      if (startR === fr && startG === fg && startB === fb && startA === fa) return;
+      // Starting pixel is already close enough to the fill color —
+      // nothing meaningful to do (also prevents re-flooding an area
+      // that was already filled with this exact tool a moment ago).
+      const startDist = colorDistSq(startR, startG, startB, startA, fr, fg, fb, fa);
+      if (startDist <= FILL_TOLERANCE_SQ) return;
 
-      const matches = (idx) =>
-        data[idx] === startR && data[idx + 1] === startG && data[idx + 2] === startB && data[idx + 3] === startA;
+      // "Fillable" = close in color to the pixel we started ON (the
+      // background/interior region), same tolerance-based test used
+      // throughout. This is what makes a semi-transparent anti-aliased
+      // edge pixel correctly read as "still basically background — keep
+      // going" right up until it's actually close to the drawn line's
+      // real color, instead of stopping (or leaking through) at the
+      // first not-100%-identical pixel.
+      const fillable = (idx) =>
+        colorDistSq(data[idx], data[idx + 1], data[idx + 2], data[idx + 3], startR, startG, startB, startA) <= FILL_TOLERANCE_SQ;
 
       // Iterative stack-based fill (recursion would blow the call stack on
       // large canvases). Scanline variant keeps this fast enough for a
       // typical phone-sized drawing area.
       const stack = [[startX, startY]];
+      const visited = new Uint8Array(w * h); // avoid re-queuing/re-scanning the same row segment from multiple directions
       while (stack.length) {
         const [x, y] = stack.pop();
+        if (visited[y * w + x]) continue;
+
         let leftX = x;
         let idx = (y * w + leftX) * 4;
-        while (leftX >= 0 && matches(idx)) { leftX--; idx -= 4; }
+        while (leftX >= 0 && fillable(idx) && !visited[y * w + leftX]) { leftX--; idx -= 4; }
         leftX++;
 
         let rightX = x;
         idx = (y * w + rightX) * 4;
-        while (rightX < w && matches(idx)) { rightX++; idx += 4; }
+        while (rightX < w && fillable(idx) && !visited[y * w + rightX]) { rightX++; idx += 4; }
         rightX--;
 
         for (let i = leftX; i <= rightX; i++) {
           const fillIdx = (y * w + i) * 4;
           data[fillIdx] = fr; data[fillIdx + 1] = fg; data[fillIdx + 2] = fb; data[fillIdx + 3] = fa;
+          visited[y * w + i] = 1;
 
           if (y > 0) {
             const upIdx = ((y - 1) * w + i) * 4;
-            if (matches(upIdx)) stack.push([i, y - 1]);
+            if (!visited[(y - 1) * w + i] && fillable(upIdx)) stack.push([i, y - 1]);
           }
           if (y < h - 1) {
             const downIdx = ((y + 1) * w + i) * 4;
-            if (matches(downIdx)) stack.push([i, y + 1]);
+            if (!visited[(y + 1) * w + i] && fillable(downIdx)) stack.push([i, y + 1]);
           }
         }
       }
@@ -129,6 +168,16 @@ const DrawCanvas = (() => {
     } catch (err) {
       console.warn('[DrawCanvas] flood fill failed:', err);
     }
+  }
+
+  // Squared Euclidean-ish distance across R/G/B/A. Squared (no sqrt) since
+  // it's only ever compared against a squared threshold — cheap enough to
+  // call per-pixel across a whole canvas scan. Alpha is weighted in too so
+  // a fully-transparent background pixel and a stroke's opaque edge don't
+  // read as "close" just because their RGB happens to be similar.
+  function colorDistSq(r1, g1, b1, a1, r2, g2, b2, a2) {
+    const dr = r1 - r2, dg = g1 - g2, db = b1 - b2, da = a1 - a2;
+    return dr * dr + dg * dg + db * db + da * da;
   }
 
   function resizeCanvas() {

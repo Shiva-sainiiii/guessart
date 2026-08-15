@@ -93,14 +93,50 @@ const BotBrain = (() => {
   // stroke — matches how tester.html plays them back); fills become a
   // beat with `fill: {color}` and no segs, which the pacer below turns
   // into an emitted 'fill' network message instead of a stroke.
+  //
+  // SAFETY NET for "fill leaks across the whole canvas": a flood fill's
+  // start point needs to sit inside a genuinely CLOSED outline, or the
+  // paint has nowhere to stop and spreads everywhere. js/drawings.js is
+  // hand-authored (drawn by hand in tester.html), and it's easy to leave
+  // an outline's start/end points a few pixels apart, or even
+  // deliberately unfinished, without noticing — the gap is often
+  // invisible at drawing time but is exactly what a flood fill exploits.
+  // Rather than hand-auditing every entry (and re-auditing every new one
+  // added later), this converter inserts one extra invisible-ish closing
+  // segment — same color as the gesture, drawn right along with it —
+  // connecting the outline's actual last point back to its first point
+  // whenever they aren't already touching. That segment becomes part of
+  // the SAME beat (so it renders as if it were always part of the
+  // outline), guaranteeing every fill's containing shape is closed
+  // before the fill beat ever runs, without changing how any correctly-
+  // closed drawing looks.
   function drawingStepsToBeats(steps) {
-    return steps.map(step => {
+    const beats = [];
+    let lastGestureBeat = null; // the most recent gesture beat, so a following fill can check/fix its closure
+    let lastGesturePts = null;
+
+    steps.forEach(step => {
       if (step.action === 'fill') {
-        return { fill: true, x: step.x, y: step.y, color: step.color };
+        // About to fill relative to whatever gesture was drawn last —
+        // make sure that gesture's outline is actually closed first.
+        if (lastGestureBeat && lastGesturePts && lastGesturePts.length >= 3) {
+          const first = lastGesturePts[0];
+          const last = lastGesturePts[lastGesturePts.length - 1];
+          const gapSq = (first[0] - last[0]) ** 2 + (first[1] - last[1]) ** 2;
+          if (gapSq > 0.0004) { // > ~2% of canvas width apart — a real gap, not just float noise
+            lastGestureBeat.segs.push({ x1: last[0], y1: last[1], x2: first[0], y2: first[1] });
+          }
+        }
+        beats.push({ fill: true, x: step.x, y: step.y, color: step.color });
+      } else {
+        // gesture
+        const beat = { segs: polyline(step.points, 1), color: step.color, width: step.width };
+        beats.push(beat);
+        lastGestureBeat = beat;
+        lastGesturePts = step.points;
       }
-      // gesture
-      return { segs: polyline(step.points, 1), color: step.color, width: step.width };
     });
+    return beats;
   }
 
   // ---- Curated templates: hand-placed primitives for common/easy words ----

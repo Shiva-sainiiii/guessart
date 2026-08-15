@@ -5,6 +5,45 @@ Peer-to-peer via WebRTC (PeerJS) — no backend, no database.
 
 _Formerly known as Sketch Duel — renamed to GuessArt._
 
+## Phase 2.11: Fixed fill leaking across the whole canvas + drawing accuracy pass
+
+- **"Fill leaks and paints the entire canvas"**: root-caused to two
+  compounding issues. (1) `floodFillRaw()` in `js/canvas.js` matched
+  pixels by EXACT color equality — but canvas strokes are anti-aliased,
+  so the pixels right along any outline are a blend, not a pure exact
+  match to either the background or the ink. That made the fill treat
+  the anti-aliased ring around a thin or slightly-open line as "still
+  open", walking straight through it and spilling across the whole
+  canvas. Rewrote it to use color-DISTANCE tolerance matching (the same
+  approach every real paint-bucket tool uses), so near-background
+  anti-aliased pixels correctly read as fillable right up to the actual
+  ink. (2) Separately and more fundamentally, `js/drawings.js`'s
+  hand-authored entries had ~50 fill actions sitting on outlines that
+  weren't actually closed (the stroke's start and end points didn't
+  touch) — some gaps as large as 80-90% of the canvas — which no amount
+  of pixel tolerance can contain, since there's no wall there at all no
+  matter how it's matched. Audited and closed every one of these across
+  all 130 words (see below), AND added a runtime safety net in
+  `js/bot.js`: `drawingStepsToBeats()` now checks the outline
+  immediately before any fill and auto-inserts a same-color closing
+  segment if it isn't already closed, so even a future hand-drawn entry
+  that's imperfectly closed can't leak.
+- **Drawing accuracy pass across all 130 `js/drawings.js` entries**:
+  every gesture that's followed by a fill now forms a genuinely closed
+  polygon, and every fill's x,y was recomputed to the shape's true
+  geometric centroid (rather than a hand-placed point that could drift
+  outside on a redraw) — this alone fixed dozens of fills that were
+  technically "inside enough" before but landed suspiciously close to
+  an edge. Ten of the most broken entries (burger, peacock, chili,
+  popcorn, waterfall, desert, lightning, canyon, climbing, robot) had
+  fills sitting on completely open lines with no enclosed area at all —
+  these were fully redrawn as proper closed shapes rather than patched.
+  20 fill actions that had literally no possible enclosed area (a fill
+  called on a bare 2-point line — glasses, cactus, meadow, and the
+  action-word figures like dancing/swimming/flying/etc.) were removed
+  outright rather than papered over, since there was nothing there for
+  them to usefully color anyway.
+
 ## Phase 2.10: Three critical bot/canvas bugs fixed
 
 - **Bot drawing was painfully slow, sometimes timing out**: `BotPeer`'s
