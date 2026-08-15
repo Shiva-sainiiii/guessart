@@ -87,6 +87,9 @@
       <line x1="2" y1="12" x2="22" y2="12"/>
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/>
     </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </symbol>
     <symbol id="icon-mic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="2" y1="2" x2="22" y2="22"/>
       <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-1"/>
@@ -307,18 +310,12 @@
     <p id="status-msg" class="status-msg"></p>
 
     <!-- ================================================================
-         SEO / MARKETING CONTENT
-         Lives INSIDE #screen-home (not outside/below the fixed app), as
-         a native <details> element. This guarantees it's reachable no
-         matter what viewport-height math is happening elsewhere: closed
-         by default so the primary create/join UI stays exactly as
-         designed, but the full text is still present in the raw HTML —
-         not display:none, not JS-injected — so Google (and anyone who
-         taps to expand it) gets the complete content. <details> content
-         is indexed by Google even while collapsed.
+         SEO / MARKETING CONTENT — shown directly, no collapse/expand.
+         Sits below the primary create/join card, in normal document
+         flow, so it's reachable by scrolling and fully indexed by
+         Google without needing a tap to reveal it.
          ================================================================ -->
-    <details class="about-details">
-      <summary class="about-summary">How it works &amp; what's inside ↓</summary>
+    <div class="about-details">
       <div class="about-inner">
 
         <header class="about-header">
@@ -374,7 +371,18 @@
         </footer>
 
       </div>
-    </details>
+    </div>
+
+    <!-- Legal / info links — mirrors the classic "Game Rules | Terms of
+         Service | Privacy Policy" row, each opening its own bottom sheet
+         instead of navigating to a separate page. -->
+    <div class="legal-links">
+      <button id="btn-open-rules" class="legal-link">Game Rules</button>
+      <span class="legal-sep">|</span>
+      <button id="btn-open-terms" class="legal-link">Terms of Service</button>
+      <span class="legal-sep">|</span>
+      <button id="btn-open-privacy" class="legal-link">Privacy Policy</button>
+    </div>
   </div>
 
   <!-- SCREEN 2: WAITING ROOM -->
@@ -602,14 +610,18 @@
     </div>
 
     <div class="settings-section" style="border-top:none; padding-top:4px;">
-      <label class="contact-field-label" for="contact-subject">Subject</label>
-      <select id="contact-subject" class="contact-select">
-        <option value="" disabled selected>Select a subject…</option>
-        <option value="Bug Report">Bug Report</option>
-        <option value="Feature Request">Feature Request</option>
-        <option value="Feedback">Feedback</option>
-        <option value="Other">Other</option>
-      </select>
+      <label class="contact-field-label" for="contact-subject-btn">Subject</label>
+      <button id="contact-subject-btn" class="contact-select-btn" type="button" aria-haspopup="listbox">
+        <span id="contact-subject-label">Select a subject…</span>
+        <svg class="icon" width="14" height="14"><use href="#icon-chevron-down"/></svg>
+      </button>
+      <div id="contact-subject-menu" class="contact-select-menu hidden" role="listbox">
+        <button class="contact-select-option" data-value="Bug Report" role="option">Bug Report</button>
+        <button class="contact-select-option" data-value="Feature Request" role="option">Feature Request</button>
+        <button class="contact-select-option" data-value="Feedback" role="option">Feedback</button>
+        <button class="contact-select-option" data-value="Other" role="option">Other</button>
+      </div>
+      <input type="hidden" id="contact-subject" value="">
 
       <label class="contact-field-label" for="contact-email">Email <span class="contact-optional">(optional)</span></label>
       <input id="contact-email" class="contact-input" type="email" placeholder="Your email address (optional)" autocomplete="off">
@@ -620,6 +632,53 @@
       <p id="contact-error" class="settings-hint hidden">Please select a subject and write a message.</p>
 
       <button id="btn-contact-send" class="btn btn-primary" style="margin-top:14px;">Send Message</button>
+    </div>
+  </div>
+
+  <!-- LEGAL / INFO: Game Rules, Terms of Service, Privacy Policy —
+       three separate bottom sheets, same pattern as Settings/Contact. -->
+  <div id="rules-backdrop" class="settings-backdrop hidden"></div>
+  <div id="rules-panel" class="settings-panel hidden legal-panel">
+    <div class="settings-header">
+      <h3>Game Rules</h3>
+      <button id="btn-rules-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
+    </div>
+    <div class="legal-body">
+      <p>One player draws a secret word on the canvas while everyone else races to type the correct guess in chat.</p>
+      <p>Guessing faster earns more points — the timer counts down each turn, so quicker correct guesses score higher than late ones.</p>
+      <p>Turns rotate automatically between players. Over multiple rounds, the player with the highest total score at the end wins.</p>
+      <p>The drawer can't type guesses during their own turn, and typing the secret word in chat while someone else is drawing doesn't count — that's on the honor system between friends.</p>
+      <p>Playing vs Computer follows the same scoring, just against the built-in bot instead of a second player.</p>
+    </div>
+  </div>
+
+  <div id="terms-backdrop" class="settings-backdrop hidden"></div>
+  <div id="terms-panel" class="settings-panel hidden legal-panel">
+    <div class="settings-header">
+      <h3>Terms of Service</h3>
+      <button id="btn-terms-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
+    </div>
+    <div class="legal-body">
+      <p>GuessArt is a free, browser-based game provided as-is, with no guarantee of uptime, accuracy, or fitness for any particular purpose.</p>
+      <p>No account or sign-up is required. Rooms are created on the fly and exist only for the duration of a session — nothing about a game is stored permanently on any server.</p>
+      <p>Don't use GuessArt to draw, type, or share anything illegal, hateful, or intended to harass another player. Rooms are private and meant for people you've personally invited.</p>
+      <p>The game, its name, and its logo belong to Shiva Saini. You're welcome to play and share links to it; please don't redistribute the code as your own without permission.</p>
+      <p>These terms may be updated as the game changes. Continued use after an update means you accept the current version.</p>
+    </div>
+  </div>
+
+  <div id="privacy-backdrop" class="settings-backdrop hidden"></div>
+  <div id="privacy-panel" class="settings-panel hidden legal-panel">
+    <div class="settings-header">
+      <h3>Privacy Policy</h3>
+      <button id="btn-privacy-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
+    </div>
+    <div class="legal-body">
+      <p>GuessArt doesn't require an account, so it doesn't collect your name, email, or any personal identity — the nickname you type is local to your device and shared only with the friend in your room.</p>
+      <p>Gameplay (drawing strokes, chat, voice) travels directly between you and your friend's device using a peer-to-peer connection — there's no central server storing or recording your games.</p>
+      <p>Voice chat requires microphone permission from your browser. It's used only for the live call with your friend and is never recorded or uploaded anywhere.</p>
+      <p>If you use the Contact Us form, the message and optional email you provide are sent directly to the developer's inbox via your own mail app — nothing is stored in a database.</p>
+      <p>This site may load third-party resources (such as the PeerJS connection library) needed for the game to function, which are subject to their own providers' policies.</p>
     </div>
   </div>
 
