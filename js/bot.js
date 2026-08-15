@@ -86,6 +86,23 @@ const BotBrain = (() => {
     return polyline([[x1, y1], [x2, y2], [x3, y3], [x1, y1]]);
   }
 
+  // ---- DRAWINGS-format converter (js/drawings.js) ----
+  // Converts the tester.html-style {action:"gesture"/"fill", ...} step
+  // list into the pacer's beat shape: gestures become one beat with
+  // segs+color+width (unbroken polyline, drawn as a single connected
+  // stroke — matches how tester.html plays them back); fills become a
+  // beat with `fill: {color}` and no segs, which the pacer below turns
+  // into an emitted 'fill' network message instead of a stroke.
+  function drawingStepsToBeats(steps) {
+    return steps.map(step => {
+      if (step.action === 'fill') {
+        return { fill: true, x: step.x, y: step.y, color: step.color };
+      }
+      // gesture
+      return { segs: polyline(step.points, 1), color: step.color, width: step.width };
+    });
+  }
+
   // ---- Curated templates: hand-placed primitives for common/easy words ----
   // Each template is a function() -> array of {segs, color, width}
   // "groups" — grouping lets the pacer send a whole recognizable part
@@ -305,68 +322,13 @@ const BotBrain = (() => {
   // direct hit, falls through to generic, which is fine).
   function templateFor(word) {
     const key = word.toLowerCase().trim();
+    // 1. Hand-drawn library from js/drawings.js (tester.html JSON) — most
+    //    detailed, colored, recognizable sketches. Checked first.
+    if (typeof DRAWINGS !== 'undefined' && DRAWINGS[key]) return drawingStepsToBeats(DRAWINGS[key]);
+    // 2. Older hand-coded geometric TEMPLATES.
     if (TEMPLATES[key]) return TEMPLATES[key]();
+    // 3. Generic category sketch — always available.
     return genericSketch(key);
-  }
-
-  // ---- LLM-backed drawing plan (falls back to templateFor on any failure) ----
-  // Converts the serverless function's {shape,...} beat format into the
-  // same {segs:[{x1,y1,x2,y2}...], color, width} shape the rest of this
-  // file (and BotPeer's pacer) already expects from TEMPLATES/genericSketch.
-  function beatsToSegFormat(beats) {
-    return beats.map(b => {
-      if (b.shape === 'line') {
-        return { segs: polyline(b.points, 2), color: b.color, width: b.width };
-      }
-      if (b.shape === 'circle') {
-        return { segs: circle(b.cx, b.cy, b.r), color: b.color, width: b.width };
-      }
-      // ellipse
-      return { segs: ellipse(b.cx, b.cy, b.rx, b.ry), color: b.color, width: b.width };
-    });
-  }
-
-  const DRAW_CACHE_KEY = 'guessart_bot_draw_cache_v1';
-
-  function loadDrawCache() {
-    try { return JSON.parse(localStorage.getItem(DRAW_CACHE_KEY) || '{}'); }
-    catch { return {}; }
-  }
-  function saveDrawCache(cache) {
-    try { localStorage.setItem(DRAW_CACHE_KEY, JSON.stringify(cache)); } catch { /* storage full/unavailable — skip */ }
-  }
-
-  // Returns a Promise<beats-in-seg-format>. Tries cache, then the LLM
-  // endpoint, then falls back to the deterministic template/generic
-  // sketch on any error/timeout so a round can never hang waiting on
-  // a flaky free-tier API.
-  async function planDrawingSmart(word) {
-    const key = word.toLowerCase().trim();
-    const cache = loadDrawCache();
-    if (cache[key]) return cache[key];
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 9000);
-      const res = await fetch('/api/bot-brain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'draw', word: key }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (!res.ok) throw new Error('bot-brain draw request failed: ' + res.status);
-      const data = await res.json();
-      if (!data.beats || !data.beats.length) throw new Error('empty beats');
-
-      const segFormat = beatsToSegFormat(data.beats);
-      cache[key] = segFormat;
-      saveDrawCache(cache);
-      return segFormat;
-    } catch (err) {
-      console.warn('[BotBrain] LLM drawing failed, using template fallback:', err.message || err);
-      return templateFor(key);
-    }
   }
 
   // ---- Guessing brain (fully local — no network calls) ----
@@ -549,16 +511,12 @@ const BotBrain = (() => {
     TEMPLATES_AVAILABLE: Object.keys(TEMPLATES),
 
     // Returns an ordered list of drawing "beats" for the bot-as-drawer to
-    // paint out over the round. Each beat: { segs: [...], color, width }.
-    // Synchronous deterministic version — used as instant fallback.
+    // paint out over the round. Each beat is either a stroke
+    // {segs, color, width} or a fill {fill:true, x, y, color}. Fully
+    // local/synchronous — no network call, no LLM, no cache needed.
     planDrawing(word) {
       return templateFor(word);
     },
-
-    // Async LLM-backed version — resolves to the same beat shape as
-    // planDrawing(), but tries the OpenRouter-backed endpoint (with
-    // caching) first. Always resolves; never rejects.
-    planDrawingSmart,
 
     newGuesserState: makeGuesserState,
 
@@ -658,33 +616,42 @@ const BotPeer = (() => {
       emit({ type: 'timeout', word: secretWord });
     }, ROUND_SECONDS * 1000);
 
-    // Fetch the drawing plan (LLM-backed, cached, with template fallback
-    // baked into planDrawingSmart itself) and then start pacing strokes
-    // out once it resolves. A brief "thinking" beat before the first
-    // stroke lands reads as natural rather than robotic.
-    BotBrain.planDrawingSmart(word).then(beats => {
-      if (roundOver || secretWord !== word) return; // round moved on while we were waiting on the network
+    // Build the drawing plan synchronously — fully local now, no network,
+    // no LLM, no waiting. drawQueue mixes two item kinds:
+    //   { kind: 'stroke', x1,y1,x2,y2, color, width }  — one segment
+    //   { kind: 'fill', x, y, color }                  — one flood fill,
+    //     always queued as a single atomic item (never split into segs)
+    const beats = BotBrain.planDrawing(word);
+    if (roundOver || secretWord !== word) return;
 
-      drawQueue = [];
-      beats.forEach(beat => {
+    drawQueue = [];
+    beats.forEach(beat => {
+      if (beat.fill) {
+        drawQueue.push({ kind: 'fill', x: beat.x, y: beat.y, color: beat.color });
+      } else {
         beat.segs.forEach(seg => {
-          drawQueue.push(Object.assign({ color: beat.color, width: beat.width, erase: false }, seg));
+          drawQueue.push(Object.assign({ kind: 'stroke', color: beat.color, width: beat.width, erase: false }, seg));
         });
-      });
-
-      // Drip out strokes over roughly 45 seconds so the sketch builds up
-      // progressively instead of appearing all at once.
-      const totalMs = 45000;
-      const perStroke = Math.max(60, totalMs / Math.max(1, drawQueue.length));
-      let i = 0;
-      function tick() {
-        if (i >= drawQueue.length || roundOver) return;
-        emit({ type: 'stroke', x1: drawQueue[i].x1, y1: drawQueue[i].y1, x2: drawQueue[i].x2, y2: drawQueue[i].y2, color: drawQueue[i].color, width: drawQueue[i].width, erase: false });
-        i++;
-        drawTimer = setTimeout(tick, perStroke + (Math.random() * 40 - 20));
       }
-      drawTimer = setTimeout(tick, 500);
     });
+
+    // Drip out strokes/fills over roughly 45 seconds so the sketch builds
+    // up progressively instead of appearing all at once.
+    const totalMs = 45000;
+    const perItem = Math.max(60, totalMs / Math.max(1, drawQueue.length));
+    let i = 0;
+    function tick() {
+      if (i >= drawQueue.length || roundOver) return;
+      const item = drawQueue[i];
+      if (item.kind === 'fill') {
+        emit({ type: 'fill', x: item.x, y: item.y, color: item.color });
+      } else {
+        emit({ type: 'stroke', x1: item.x1, y1: item.y1, x2: item.x2, y2: item.y2, color: item.color, width: item.width, erase: false });
+      }
+      i++;
+      drawTimer = setTimeout(tick, perItem + (Math.random() * 40 - 20));
+    }
+    drawTimer = setTimeout(tick, 500);
   }
 
   // Bot-as-guesser: periodically evaluate whether it has enough signal
