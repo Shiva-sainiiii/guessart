@@ -32,7 +32,7 @@
 <meta name="twitter:image" content="https://guessart.netlify.app/public/images/og-cover.png">
 
 <!-- ===== THEME / PWA-ish polish (matches --bg color) ===== -->
-<meta name="theme-color" content="#0e1416">
+<meta name="theme-color" content="#1a2226">
 
 <link rel="icon" type="image/png" href="public/images/favicon.png">
 <link rel="apple-touch-icon" href="public/images/apple-touch-icon.png">
@@ -81,6 +81,11 @@
     <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="4" width="20" height="16" rx="2"/>
       <path d="m22 6-10 7L2 6"/>
+    </symbol>
+    <symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/>
     </symbol>
     <symbol id="icon-mic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="2" y1="2" x2="22" y2="22"/>
@@ -220,10 +225,20 @@
 
   <!-- SCREEN 1: HOME / LOBBY -->
   <div id="screen-home" class="screen active">
-    <!-- Top-right utility button: opens the Contact Us bottom sheet.
-         Sits above the brand block so it's reachable without disturbing
-         the centered logo/title layout. -->
-    <button id="btn-contact-open" class="home-corner-btn" title="Contact Us">
+    <!-- Top-left: language selector (dummy for now — English only, more
+         languages coming later). Top-right: Contact Us. Both sit above
+         the brand block so they don't disturb the centered logo/title. -->
+    <div class="home-corner-lang">
+      <button id="btn-lang-open" class="home-corner-btn home-corner-btn-wide" title="Language">
+        <svg class="icon" width="16" height="16"><use href="#icon-globe"/></svg>
+        <span id="lang-current-label">English</span>
+      </button>
+      <div id="lang-menu" class="lang-menu hidden">
+        <button class="lang-option active" data-lang="en">English</button>
+        <button class="lang-option" data-lang="hi" disabled>हिंदी <span class="lang-soon">Soon</span></button>
+      </div>
+    </div>
+    <button id="btn-contact-open" class="home-corner-btn home-corner-btn-right" title="Contact Us">
       <svg class="icon" width="18" height="18"><use href="#icon-mail"/></svg>
     </button>
 
