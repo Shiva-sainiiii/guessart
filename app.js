@@ -241,13 +241,26 @@ function refreshHomeButtonStates() {
   const closeBtn = document.getElementById('btn-contact-close');
   const backdrop = document.getElementById('contact-backdrop');
   const panel = document.getElementById('contact-panel');
-  const subjectSel = document.getElementById('contact-subject');
+  const subjectHidden = document.getElementById('contact-subject');
+  const subjectBtn = document.getElementById('contact-subject-btn');
+  const subjectLabel = document.getElementById('contact-subject-label');
+  const subjectMenu = document.getElementById('contact-subject-menu');
+  const subjectOptions = subjectMenu.querySelectorAll('.contact-select-option');
   const emailInput = document.getElementById('contact-email');
   const messageInput = document.getElementById('contact-message');
   const errorHint = document.getElementById('contact-error');
   const sendBtn = document.getElementById('btn-contact-send');
 
   const CONTACT_ADDRESS = 'shivasaini.dev@gmail.com'; // TODO: swap to your real inbox
+
+  function resetSubjectField() {
+    subjectHidden.value = '';
+    subjectLabel.textContent = 'Select a subject…';
+    subjectBtn.classList.remove('has-value');
+    subjectOptions.forEach((o) => o.classList.remove('active'));
+    subjectMenu.classList.add('hidden');
+    subjectBtn.setAttribute('aria-expanded', 'false');
+  }
 
   function openPanel() {
     errorHint.classList.add('hidden');
@@ -257,14 +270,44 @@ function refreshHomeButtonStates() {
   function closePanel() {
     panel.classList.add('hidden');
     backdrop.classList.add('hidden');
+    subjectMenu.classList.add('hidden');
+    subjectBtn.setAttribute('aria-expanded', 'false');
   }
 
   openBtn.addEventListener('click', openPanel);
   closeBtn.addEventListener('click', closePanel);
   backdrop.addEventListener('click', closePanel);
 
+  // Custom Subject dropdown — themed to match the rest of the app
+  // instead of relying on the OS's native <select> popup.
+  subjectBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const show = subjectMenu.classList.contains('hidden');
+    subjectMenu.classList.toggle('hidden', !show);
+    subjectBtn.setAttribute('aria-expanded', String(show));
+  });
+
+  subjectOptions.forEach((opt) => {
+    opt.addEventListener('click', () => {
+      subjectOptions.forEach((o) => o.classList.remove('active'));
+      opt.classList.add('active');
+      subjectHidden.value = opt.dataset.value;
+      subjectLabel.textContent = opt.dataset.value;
+      subjectBtn.classList.add('has-value');
+      subjectMenu.classList.add('hidden');
+      subjectBtn.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!subjectMenu.classList.contains('hidden') && !subjectMenu.contains(e.target) && e.target !== subjectBtn) {
+      subjectMenu.classList.add('hidden');
+      subjectBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
   sendBtn.addEventListener('click', () => {
-    const subject = subjectSel.value;
+    const subject = subjectHidden.value;
     const message = messageInput.value.trim();
 
     if (!subject || !message) {
@@ -281,10 +324,40 @@ function refreshHomeButtonStates() {
 
     window.location.href = mailto;
     closePanel();
-    subjectSel.value = '';
+    resetSubjectField();
     emailInput.value = '';
     messageInput.value = '';
   });
+})();
+
+// ---------- LEGAL BOTTOM SHEETS (Game Rules / Terms / Privacy) ----------
+// Same open/close pattern as Contact Us, just simple read-only panels —
+// factored into one helper since all three are identical wiring.
+(function setupLegalPanels() {
+  function wirePanel(openBtnId, closeBtnId, panelId, backdropId) {
+    const openBtn = document.getElementById(openBtnId);
+    const closeBtn = document.getElementById(closeBtnId);
+    const panel = document.getElementById(panelId);
+    const backdrop = document.getElementById(backdropId);
+    if (!openBtn || !panel || !backdrop) return;
+
+    function open() {
+      panel.classList.remove('hidden');
+      backdrop.classList.remove('hidden');
+    }
+    function close() {
+      panel.classList.add('hidden');
+      backdrop.classList.add('hidden');
+    }
+
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+  }
+
+  wirePanel('btn-open-rules', 'btn-rules-close', 'rules-panel', 'rules-backdrop');
+  wirePanel('btn-open-terms', 'btn-terms-close', 'terms-panel', 'terms-backdrop');
+  wirePanel('btn-open-privacy', 'btn-privacy-close', 'privacy-panel', 'privacy-backdrop');
 })();
 
 nameInput.addEventListener('input', refreshHomeButtonStates);
