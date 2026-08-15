@@ -198,38 +198,224 @@ function refreshHomeButtonStates() {
   window.__selectJoinSubtabForRoomLink = () => { selectMode('friend'); selectSubtab('join'); };
 })();
 
-// ---------- LANGUAGE SELECTOR (home screen, dummy for now) ----------
-// Only English is wired up right now — the menu exists so the UI is
-// ready to plug real i18n in later without another layout change.
-// Picking "English" (the only enabled option) just closes the menu.
-(function setupLanguageMenu() {
-  const openBtn = document.getElementById('btn-lang-open');
-  const menu = document.getElementById('lang-menu');
-  const options = menu.querySelectorAll('.lang-option:not(:disabled)');
+// ---------- THEME (Light/Dark, persisted) ----------
+// Applied as a data-theme attribute on <body>; style.css defines the
+// full light-mode variable overrides under body[data-theme="light"].
+// Runs immediately (not wrapped in DOMContentLoaded) so the saved theme
+// applies before first paint and there's no dark->light flash.
+const ThemeManager = (function setupTheme() {
+  const STORAGE_KEY = 'guessart_theme';
 
-  function toggleMenu(show) {
-    menu.classList.toggle('hidden', !show);
+  function apply(theme) {
+    if (theme === 'light') {
+      document.body.setAttribute('data-theme', 'light');
+    } else {
+      document.body.removeAttribute('data-theme');
+    }
   }
 
-  openBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleMenu(menu.classList.contains('hidden'));
-  });
+  function get() {
+    try { return localStorage.getItem(STORAGE_KEY) || 'dark'; }
+    catch { return 'dark'; }
+  }
 
-  options.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      options.forEach((o) => o.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('lang-current-label').textContent = btn.textContent.trim();
-      toggleMenu(false);
-    });
-  });
+  function set(theme) {
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* storage unavailable — theme just won't persist */ }
+    apply(theme);
+  }
 
-  document.addEventListener('click', (e) => {
-    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== openBtn) {
-      toggleMenu(false);
+  apply(get());
+  return { get, set };
+})();
+
+// ---------- LANGUAGE (English/Hinglish, persisted) ----------
+// Scope: switches the static home-screen + menu copy visible right now
+// (the strings in LANG_STRINGS below). Live in-round game text (chat
+// prompts, hints, etc.) isn't covered yet — the Settings hint under the
+// toggle says so, so this doesn't overclaim what it does.
+const LangManager = (function setupLang() {
+  const STORAGE_KEY = 'guessart_lang';
+
+  const LANG_STRINGS = {
+    en: {
+      tagline: 'draw. guess. roast your friend.',
+      namePlaceholder: 'e.g. Priya',
+      playFriend: 'Play with Friend',
+      playComputer: 'Play with Computer',
+      createRoom: 'Create Room',
+      joinRoom: 'Join Room',
+      roomHint: 'Start a new room and share the code with your friend.',
+    },
+    hi: {
+      tagline: 'banao. pehchano. dost ko roast karo.',
+      namePlaceholder: 'jaise Priya',
+      playFriend: 'Dost ke saath khelo',
+      playComputer: 'Computer ke saath khelo',
+      createRoom: 'Room banao',
+      joinRoom: 'Room join karo',
+      roomHint: 'Naya room banao aur code apne dost ko bhejo.',
+    },
+  };
+
+  // Buttons here mix an inline <svg> icon with trailing text, so we can't
+  // just set textContent on the whole button (that would wipe the icon).
+  // Instead, replace only the last text node — this matches how these
+  // buttons are authored in index.html (icon markup, then a plain text
+  // tail) without needing extra wrapper <span>s just for translation.
+  function setTrailingText(el, text) {
+    if (!el) return;
+    for (let i = el.childNodes.length - 1; i >= 0; i--) {
+      if (el.childNodes[i].nodeType === Node.TEXT_NODE) {
+        el.childNodes[i].textContent = ' ' + text;
+        return;
+      }
     }
+    el.appendChild(document.createTextNode(' ' + text));
+  }
+
+  function apply(lang) {
+    const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
+    const tagline = document.querySelector('.tagline');
+    const nameInput = document.getElementById('input-name');
+    const roomHint = document.querySelector('.mode-hint');
+
+    if (tagline) tagline.textContent = s.tagline;
+    if (nameInput) nameInput.setAttribute('placeholder', s.namePlaceholder);
+
+    setTrailingText(document.getElementById('tab-mode-friend'), s.playFriend);
+    setTrailingText(document.getElementById('tab-mode-bot'), s.playComputer);
+
+    const createTab = document.getElementById('subtab-create');
+    const joinTab = document.getElementById('subtab-join');
+    const createBtn = document.getElementById('btn-create');
+    const joinBtn = document.getElementById('btn-join');
+    if (createTab) createTab.textContent = s.createRoom;
+    if (joinTab) joinTab.textContent = s.joinRoom;
+    if (createBtn) createBtn.textContent = s.createRoom;
+    if (joinBtn) joinBtn.textContent = s.joinRoom;
+    if (roomHint) roomHint.textContent = s.roomHint;
+  }
+
+  function get() {
+    try { return localStorage.getItem(STORAGE_KEY) || 'en'; }
+    catch { return 'en'; }
+  }
+
+  function set(lang) {
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch { /* storage unavailable — lang just won't persist */ }
+    apply(lang);
+  }
+
+  apply(get());
+  return { get, set };
+})();
+
+// ---------- HAMBURGER MENU (home screen only) ----------
+// Root list panel (About/Source/Settings/Donate/Follow) + four sub-panels,
+// all sharing the same bottom-sheet show/hide pattern as Contact Us and
+// the legal panels. Sub-panels have their own back button (returns to the
+// root list, keeping the backdrop up) as well as a close button (closes
+// everything, same as tapping the backdrop).
+(function setupHamburgerMenu() {
+  const menuOpenBtn = document.getElementById('btn-menu-open');
+  const menuCloseBtn = document.getElementById('btn-menu-close');
+  const backdrop = document.getElementById('menu-backdrop');
+  const rootPanel = document.getElementById('menu-root-panel');
+  const subPanels = Array.from(document.querySelectorAll('.sub-panel'));
+
+  function closeAll() {
+    rootPanel.classList.add('hidden');
+    subPanels.forEach((p) => p.classList.add('hidden'));
+    backdrop.classList.add('hidden');
+  }
+
+  function openRoot() {
+    subPanels.forEach((p) => p.classList.add('hidden'));
+    rootPanel.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  }
+
+  function openSub(id) {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    rootPanel.classList.add('hidden');
+    subPanels.forEach((p) => p.classList.add('hidden'));
+    panel.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  }
+
+  menuOpenBtn.addEventListener('click', openRoot);
+  menuCloseBtn.addEventListener('click', closeAll);
+  backdrop.addEventListener('click', closeAll);
+
+  rootPanel.querySelectorAll('[data-open-sub]').forEach((btn) => {
+    btn.addEventListener('click', () => openSub(btn.dataset.openSub));
   });
+
+  document.querySelectorAll('.menu-back-btn').forEach((btn) => {
+    btn.addEventListener('click', () => openRoot());
+  });
+
+  document.querySelectorAll('.menu-sub-close').forEach((btn) => {
+    btn.addEventListener('click', closeAll);
+  });
+
+  // ---- Theme toggle (inside Settings sub-panel) ----
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    const themeOptions = themeToggle.querySelectorAll('.segmented-option');
+    function syncThemeUI(theme) {
+      themeOptions.forEach((o) => o.classList.toggle('active', o.dataset.themeValue === theme));
+    }
+    syncThemeUI(ThemeManager.get());
+    themeOptions.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ThemeManager.set(btn.dataset.themeValue);
+        syncThemeUI(btn.dataset.themeValue);
+      });
+    });
+  }
+
+  // ---- Language toggle (inside Settings sub-panel) ----
+  const langToggle = document.getElementById('lang-toggle');
+  if (langToggle) {
+    const langOptions = langToggle.querySelectorAll('.segmented-option');
+    function syncLangUI(lang) {
+      langOptions.forEach((o) => o.classList.toggle('active', o.dataset.langValue === lang));
+    }
+    syncLangUI(LangManager.get());
+    langOptions.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        LangManager.set(btn.dataset.langValue);
+        syncLangUI(btn.dataset.langValue);
+      });
+    });
+  }
+
+  // ---- Copy UPI ID (inside Gift & Donate sub-panel) ----
+  const copyBtn = document.getElementById('btn-copy-upi');
+  const upiIdEl = document.getElementById('donate-upi-id');
+  const copyHint = document.getElementById('donate-copy-hint');
+  if (copyBtn && upiIdEl) {
+    copyBtn.addEventListener('click', async () => {
+      const text = upiIdEl.textContent.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // Clipboard API unavailable/blocked — fall back to a manual select
+        // so the person can still copy it themselves via long-press.
+        const range = document.createRange();
+        range.selectNodeContents(upiIdEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      if (copyHint) {
+        copyHint.classList.remove('hidden');
+        setTimeout(() => copyHint.classList.add('hidden'), 1800);
+      }
+    });
+  }
 })();
 
 // ---------- CONTACT US (home screen only) ----------

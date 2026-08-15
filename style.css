@@ -160,10 +160,12 @@ body {
   color: var(--text-dim);
 }
 
-/* Top-corner utility buttons on the home screen (Language + Contact Us). */
+/* Top-corner utility buttons on the home screen (Menu + Contact Us). */
 .home-corner-btn {
   position: absolute;
   top: 4px;
+  left: 20px;
+  width: 38px;
   height: 38px;
   border-radius: 19px;
   border: 1px solid var(--glass-border);
@@ -178,55 +180,7 @@ body {
   z-index: 5;
 }
 .home-corner-btn:active { transform: scale(0.94); }
-.home-corner-btn-right { right: 20px; width: 38px; }
-.home-corner-btn-wide { left: 0; width: auto; padding: 0 14px; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); }
-
-.home-corner-lang { position: absolute; top: 4px; left: 20px; z-index: 6; }
-.home-corner-lang .home-corner-btn { position: static; }
-
-.lang-menu {
-  position: absolute;
-  top: 44px;
-  left: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 6px;
-  min-width: 140px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.lang-menu.hidden { display: none; }
-
-.lang-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  padding: 9px 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-.lang-option.active { background: rgba(45,212,167,0.14); color: var(--primary); }
-.lang-option:disabled { color: var(--text-dim); cursor: default; opacity: 0.6; }
-.lang-soon {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: var(--border);
-  color: var(--text-dim);
-  border-radius: 6px;
-  padding: 2px 6px;
-}
+.home-corner-btn-right { left: auto; right: 20px; }
 
 .brand { text-align: center; margin-bottom: 32px; }
 .brand-logo {
@@ -1665,3 +1619,123 @@ button {
   margin-bottom: 14px;
 }
 .legal-body p:last-child { margin-bottom: 0; }
+
+/* ===== HAMBURGER MENU (home screen) ===== */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 2px;
+}
+
+.menu-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 10px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+}
+.menu-list-item:active { background: var(--bg); }
+.menu-list-item-left { display: flex; align-items: center; gap: 10px; color: var(--text); }
+.menu-list-item .icon:last-child { color: var(--text-dim); flex-shrink: 0; }
+
+/* Sub-panels (About / Settings / Donate / Follow) share the settings-panel
+   look but need a leading back-arrow + trailing close in the header,
+   instead of just a close button like the root panels. */
+.sub-panel .settings-header { gap: 8px; }
+.menu-back-btn { margin-right: 2px; }
+.sub-panel .settings-header h3 { flex: 1; }
+
+.about-dev-body p, .donate-body p { font-size: 13px; line-height: 1.6; color: var(--text-dim); margin-bottom: 14px; }
+.about-dev-body p:last-child, .donate-body p:last-child { margin-bottom: 0; }
+
+.donate-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 16px;
+}
+.donate-qr-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.donate-upi-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.donate-upi-id { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.2px; }
+#donate-copy-hint { text-align: center; }
+
+/* Segmented Light/Dark and English/Hinglish toggles — two-option pill
+   switch, matches the app's rounded/glass visual language rather than
+   a plain <select> or native toggle. */
+.segmented-toggle {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.segmented-option {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.segmented-option.active { background: var(--primary); color: #062019; }
+
+/* ===== LIGHT THEME ===== */
+body[data-theme="light"] {
+  --bg: #e8edf4;
+  --bg-card: #ffffff;
+  --primary: #2dd4a7;
+  --primary-dark: #1fae87;
+  --accent: #e0603f;
+  --text: #17202e;
+  --text-dim: #5c6673;
+  --success: #2f9e5e;
+  --border: #e1e5eb;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(20, 30, 45, 0.10);
+}
+body[data-theme="light"] .home-corner-btn,
+body[data-theme="light"] .settings-gear-btn {
+  color: var(--text-dim);
+  background: #eef1f5;
+  border-color: #dde2e8;
+}
+body[data-theme="light"] .settings-backdrop { background: rgba(15, 25, 35, 0.35); }
+body[data-theme="light"] .card,
+body[data-theme="light"] .settings-panel { box-shadow: 0 8px 28px rgba(30, 40, 60, 0.10); }
+body[data-theme="light"] input[type="text"] { border-color: #1c2e3d; }
+body[data-theme="light"] .mode-tab:not(.active),
+body[data-theme="light"] .subtab:not(.active),
+body[data-theme="light"] .btn-secondary {
+  background: #e3e7ec;
+  color: var(--text-dim);
+}
+body[data-theme="light"] .segmented-toggle { background: #eef1f5; }
