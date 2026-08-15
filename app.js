@@ -198,6 +198,61 @@ function refreshHomeButtonStates() {
   window.__selectJoinSubtabForRoomLink = () => { selectMode('friend'); selectSubtab('join'); };
 })();
 
+// ---------- CONTACT US (home screen only) ----------
+// No backend on this project, so "Send" doesn't POST anywhere — it opens
+// the visitor's own mail app via a mailto: link, pre-filled with what
+// they typed. Same bottom-sheet show/hide pattern as the Settings panel.
+(function setupContactPanel() {
+  const openBtn = document.getElementById('btn-contact-open');
+  const closeBtn = document.getElementById('btn-contact-close');
+  const backdrop = document.getElementById('contact-backdrop');
+  const panel = document.getElementById('contact-panel');
+  const subjectSel = document.getElementById('contact-subject');
+  const emailInput = document.getElementById('contact-email');
+  const messageInput = document.getElementById('contact-message');
+  const errorHint = document.getElementById('contact-error');
+  const sendBtn = document.getElementById('btn-contact-send');
+
+  const CONTACT_ADDRESS = 'shivasaini.dev@gmail.com'; // TODO: swap to your real inbox
+
+  function openPanel() {
+    errorHint.classList.add('hidden');
+    panel.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  }
+  function closePanel() {
+    panel.classList.add('hidden');
+    backdrop.classList.add('hidden');
+  }
+
+  openBtn.addEventListener('click', openPanel);
+  closeBtn.addEventListener('click', closePanel);
+  backdrop.addEventListener('click', closePanel);
+
+  sendBtn.addEventListener('click', () => {
+    const subject = subjectSel.value;
+    const message = messageInput.value.trim();
+
+    if (!subject || !message) {
+      errorHint.classList.remove('hidden');
+      return;
+    }
+    errorHint.classList.add('hidden');
+
+    const replyTo = emailInput.value.trim();
+    const bodyLines = [message, '', replyTo ? `Reply-to: ${replyTo}` : '(no reply email given)'];
+    const mailto = `mailto:${CONTACT_ADDRESS}` +
+      `?subject=${encodeURIComponent('[GuessArt] ' + subject)}` +
+      `&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+
+    window.location.href = mailto;
+    closePanel();
+    subjectSel.value = '';
+    emailInput.value = '';
+    messageInput.value = '';
+  });
+})();
+
 nameInput.addEventListener('input', refreshHomeButtonStates);
 joinCodeInput.addEventListener('input', (e) => {
   e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
