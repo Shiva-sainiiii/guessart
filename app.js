@@ -198,6 +198,40 @@ function refreshHomeButtonStates() {
   window.__selectJoinSubtabForRoomLink = () => { selectMode('friend'); selectSubtab('join'); };
 })();
 
+// ---------- LANGUAGE SELECTOR (home screen, dummy for now) ----------
+// Only English is wired up right now — the menu exists so the UI is
+// ready to plug real i18n in later without another layout change.
+// Picking "English" (the only enabled option) just closes the menu.
+(function setupLanguageMenu() {
+  const openBtn = document.getElementById('btn-lang-open');
+  const menu = document.getElementById('lang-menu');
+  const options = menu.querySelectorAll('.lang-option:not(:disabled)');
+
+  function toggleMenu(show) {
+    menu.classList.toggle('hidden', !show);
+  }
+
+  openBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu(menu.classList.contains('hidden'));
+  });
+
+  options.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      options.forEach((o) => o.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('lang-current-label').textContent = btn.textContent.trim();
+      toggleMenu(false);
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== openBtn) {
+      toggleMenu(false);
+    }
+  });
+})();
+
 // ---------- CONTACT US (home screen only) ----------
 // No backend on this project, so "Send" doesn't POST anywhere — it opens
 // the visitor's own mail app via a mailto: link, pre-filled with what
