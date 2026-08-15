@@ -172,4 +172,648 @@ const DRAWINGS = {
     { "action": "fill", "color": "#2ecc71", "x": 0.633, "y": 0.479 },
     { "action": "fill", "color": "#e67e22", "x": 0.506, "y": 0.299 }
   ],
+  suitcase: [
+    { "action": "gesture", "color": "#5d4037", "width": 5, "points": [[0.25, 0.35], [0.75, 0.35], [0.78, 0.38], [0.78, 0.85], [0.75, 0.88], [0.25, 0.88], [0.22, 0.85], [0.22, 0.38], [0.25, 0.35]] },
+    { "action": "fill", "color": "#8d6e63", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#3e2723", "width": 4, "points": [[0.22, 0.55], [0.78, 0.55]] },
+    { "action": "gesture", "color": "#3e2723", "width": 6, "points": [[0.42, 0.28], [0.42, 0.35]] },
+    { "action": "gesture", "color": "#3e2723", "width": 6, "points": [[0.58, 0.28], [0.58, 0.35]] },
+    { "action": "gesture", "color": "#3e2723", "width": 4, "points": [[0.42, 0.28], [0.58, 0.28]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.35, 0.65], [0.35, 0.75]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.65, 0.65], [0.65, 0.75]] }
+  ],
+  
+  helmet: [
+    { "action": "gesture", "color": "#c0392b", "width": 5, "points": [[0.25, 0.6], [0.25, 0.45], [0.32, 0.3], [0.45, 0.22], [0.55, 0.22], [0.68, 0.3], [0.75, 0.45], [0.75, 0.6], [0.25, 0.6]] },
+    { "action": "fill", "color": "#e74c3c", "x": 0.5, "y": 0.4 },
+    { "action": "gesture", "color": "#2c3e50", "width": 3, "points": [[0.25, 0.6], [0.75, 0.6]] },
+    { "action": "gesture", "color": "#34495e", "width": 4, "points": [[0.32, 0.62], [0.68, 0.62], [0.68, 0.72], [0.32, 0.72], [0.32, 0.62]] },
+    { "action": "fill", "color": "#7f8c8d", "x": 0.5, "y": 0.67 },
+    { "action": "gesture", "color": "#c0392b", "width": 3, "points": [[0.5, 0.22], [0.5, 0.6]] }
+  ],
+  
+  glasses: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 5, "points": [[0.2, 0.5], [0.2, 0.42], [0.27, 0.38], [0.36, 0.38], [0.4, 0.42], [0.4, 0.5], [0.36, 0.55], [0.27, 0.55], [0.2, 0.5]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 5, "points": [[0.6, 0.5], [0.6, 0.42], [0.64, 0.38], [0.73, 0.38], [0.8, 0.42], [0.8, 0.5], [0.73, 0.55], [0.64, 0.55], [0.6, 0.5]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.4, 0.44], [0.6, 0.44]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.2, 0.46], [0.1, 0.4]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.8, 0.46], [0.9, 0.4]] },
+    { "action": "fill", "color": "#87ceeb", "x": 0.3, "y": 0.46 },
+    { "action": "fill", "color": "#87ceeb", "x": 0.7, "y": 0.46 }
+  ],
+  
+  wallet: [
+    { "action": "gesture", "color": "#3e2723", "width": 5, "points": [[0.22, 0.4], [0.78, 0.4], [0.78, 0.75], [0.22, 0.75], [0.22, 0.4]] },
+    { "action": "fill", "color": "#5d4037", "x": 0.5, "y": 0.58 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.22, 0.575], [0.78, 0.575]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.62, 0.5], [0.7, 0.5], [0.7, 0.6], [0.62, 0.6], [0.62, 0.5]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.3, 0.65], [0.5, 0.65]] }
+  ],
+  
+  shoe: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 5, "points": [[0.2, 0.7], [0.2, 0.55], [0.25, 0.48], [0.35, 0.45], [0.4, 0.5], [0.5, 0.48], [0.65, 0.5], [0.78, 0.58], [0.82, 0.68], [0.8, 0.75], [0.2, 0.75], [0.2, 0.7]] },
+    { "action": "fill", "color": "#e74c3c", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.2, 0.75], [0.82, 0.75], [0.82, 0.8], [0.18, 0.8], [0.2, 0.75]] },
+    { "action": "fill", "color": "#212121", "x": 0.5, "y": 0.77 },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.4, 0.52], [0.35, 0.58]] },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.48, 0.5], [0.43, 0.58]] },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.56, 0.5], [0.51, 0.58]] }
+  ],
+  
+  toothbrush: [
+    { "action": "gesture", "color": "#3498db", "width": 6, "points": [[0.3, 0.85], [0.65, 0.4]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 8, "points": [[0.65, 0.4], [0.75, 0.25]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.66, 0.36], [0.7, 0.31]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.7, 0.32], [0.74, 0.27]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.62, 0.4], [0.66, 0.35]] }
+  ],
+  
+  pillow: [
+    { "action": "gesture", "color": "#f5f5f5", "width": 5, "points": [[0.2, 0.35], [0.8, 0.35], [0.85, 0.5], [0.8, 0.65], [0.2, 0.65], [0.15, 0.5], [0.2, 0.35]] },
+    { "action": "fill", "color": "#ffffff", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.2, 0.35], [0.5, 0.42], [0.8, 0.35]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.2, 0.65], [0.5, 0.58], [0.8, 0.65]] }
+  ],
+  
+  broom: [
+    { "action": "gesture", "color": "#8d6e63", "width": 4, "points": [[0.55, 0.15], [0.4, 0.55]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.4, 0.55], [0.2, 0.85]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.4, 0.55], [0.3, 0.88]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.4, 0.55], [0.42, 0.88]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.4, 0.55], [0.53, 0.86]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.4, 0.55], [0.6, 0.8]] },
+    { "action": "gesture", "color": "#6d4c1f", "width": 5, "points": [[0.35, 0.5], [0.45, 0.5], [0.45, 0.6], [0.35, 0.6], [0.35, 0.5]] }
+  ],
+  
+  envelope: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.2, 0.35], [0.8, 0.35], [0.8, 0.65], [0.2, 0.65], [0.2, 0.35]] },
+    { "action": "fill", "color": "#f5f5f5", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.2, 0.35], [0.5, 0.55], [0.8, 0.35]] },
+    { "action": "gesture", "color": "#c0392b", "width": 3, "points": [[0.62, 0.42], [0.7, 0.42], [0.7, 0.48], [0.62, 0.48], [0.62, 0.42]] }
+  ],
+  
+  flashlight: [
+    { "action": "gesture", "color": "#212121", "width": 5, "points": [[0.35, 0.6], [0.35, 0.85], [0.65, 0.85], [0.65, 0.6], [0.35, 0.6]] },
+    { "action": "fill", "color": "#424242", "x": 0.5, "y": 0.72 },
+    { "action": "gesture", "color": "#616161", "width": 5, "points": [[0.32, 0.4], [0.68, 0.4], [0.65, 0.6], [0.35, 0.6], [0.32, 0.4]] },
+    { "action": "fill", "color": "#9e9e9e", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.35, 0.4], [0.65, 0.4], [0.6, 0.25], [0.4, 0.25], [0.35, 0.4]] },
+    { "action": "fill", "color": "#fff176", "x": 0.5, "y": 0.33 },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.6, 0.3], [0.85, 0.2]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.62, 0.35], [0.9, 0.32]] }
+  ],
+  
+  necklace: [
+    { "action": "gesture", "color": "#d4af37", "width": 3, "points": [[0.3, 0.3], [0.25, 0.45], [0.25, 0.6], [0.32, 0.7], [0.45, 0.75], [0.55, 0.75], [0.68, 0.7], [0.75, 0.6], [0.75, 0.45], [0.7, 0.3]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 6, "points": [[0.5, 0.72], [0.5, 0.72]] },
+    { "action": "fill", "color": "#ff5252", "x": 0.5, "y": 0.72 }
+  ],
+  
+  kettle: [
+    { "action": "gesture", "color": "#455a64", "width": 5, "points": [[0.3, 0.9], [0.3, 0.6], [0.35, 0.42], [0.5, 0.35], [0.65, 0.42], [0.7, 0.6], [0.7, 0.9], [0.3, 0.9]] },
+    { "action": "fill", "color": "#607d8b", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#37474f", "width": 4, "points": [[0.7, 0.55], [0.85, 0.45], [0.82, 0.4]] },
+    { "action": "gesture", "color": "#37474f", "width": 4, "points": [[0.3, 0.55], [0.2, 0.55], [0.2, 0.65], [0.3, 0.65]] },
+    { "action": "gesture", "color": "#37474f", "width": 4, "points": [[0.42, 0.35], [0.42, 0.25], [0.58, 0.25], [0.58, 0.35]] }
+  ],
+  
+  calendar: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.2, 0.25], [0.8, 0.25], [0.8, 0.85], [0.2, 0.85], [0.2, 0.25]] },
+    { "action": "fill", "color": "#ffffff", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#e74c3c", "width": 5, "points": [[0.2, 0.35], [0.8, 0.35]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.3, 0.2], [0.3, 0.3]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.7, 0.2], [0.7, 0.3]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.3, 0.5], [0.4, 0.5]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.5, 0.5], [0.6, 0.5]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.3, 0.65], [0.4, 0.65]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 2, "points": [[0.5, 0.65], [0.6, 0.65]] }
+  ],
+  
+  pencil: [
+    { "action": "gesture", "color": "#f1c40f", "width": 8, "points": [[0.25, 0.75], [0.65, 0.35]] },
+    { "action": "gesture", "color": "#e0a96d", "width": 8, "points": [[0.65, 0.35], [0.75, 0.25]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.72, 0.28], [0.78, 0.22]] },
+    { "action": "gesture", "color": "#e91e63", "width": 8, "points": [[0.22, 0.78], [0.25, 0.75]] }
+  ],
+  
+  wheelchair: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.35, 0.55], [0.35, 0.55]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.35, 0.35], [0.35, 0.75], [0.6, 0.75]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.3, 0.35], [0.5, 0.35]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.35, 0.5], [0.55, 0.5]] },
+    { "action": "gesture", "color": "#2c3e50", "width": 5, "points": [[0.35, 0.85], [0.35, 0.55], [0.6, 0.55], [0.6, 0.65]] },
+    { "action": "gesture", "color": "#c0392b", "width": 2, "points": [[0.42, 0.6], [0.55, 0.6]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.4, 0.9], [0.4, 0.7], [0.5, 0.55], [0.5, 0.7], [0.4, 0.9]] },
+    { "action": "fill", "color": "#333333", "x": 0.42, "y": 0.75 }
+  ],
+  elephant: [
+    { "action": "gesture", "color": "#7f8c8d", "width": 5, "points": [[0.3, 0.55], [0.28, 0.4], [0.35, 0.3], [0.5, 0.28], [0.65, 0.32], [0.72, 0.42], [0.72, 0.55], [0.68, 0.65], [0.3, 0.65], [0.28, 0.6], [0.3, 0.55]] },
+    { "action": "fill", "color": "#95a5a6", "x": 0.5, "y": 0.45 },
+    { "action": "gesture", "color": "#7f8c8d", "width": 4, "points": [[0.35, 0.55], [0.32, 0.7], [0.3, 0.85], [0.26, 0.9]] },
+    { "action": "gesture", "color": "#95a5a6", "width": 3, "points": [[0.26, 0.9], [0.28, 0.85], [0.28, 0.8]] },
+    { "action": "gesture", "color": "#7f8c8d", "width": 5, "points": [[0.35, 0.65], [0.35, 0.85]] },
+    { "action": "gesture", "color": "#7f8c8d", "width": 5, "points": [[0.45, 0.65], [0.45, 0.85]] },
+    { "action": "gesture", "color": "#7f8c8d", "width": 5, "points": [[0.58, 0.65], [0.58, 0.85]] },
+    { "action": "gesture", "color": "#7f8c8d", "width": 5, "points": [[0.68, 0.65], [0.68, 0.85]] },
+    { "action": "gesture", "color": "#95a5a6", "width": 4, "points": [[0.68, 0.4], [0.8, 0.35], [0.85, 0.42], [0.78, 0.48], [0.68, 0.45]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.6, 0.42], [0.6, 0.42]] },
+    { "action": "gesture", "color": "#7f8c8d", "width": 2, "points": [[0.4, 0.35], [0.55, 0.33]] }
+  ],
+  
+  penguin: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 5, "points": [[0.4, 0.3], [0.3, 0.4], [0.28, 0.6], [0.32, 0.8], [0.4, 0.88], [0.6, 0.88], [0.68, 0.8], [0.72, 0.6], [0.7, 0.4], [0.6, 0.3], [0.4, 0.3]] },
+    { "action": "fill", "color": "#212121", "x": 0.35, "y": 0.5 },
+    { "action": "gesture", "color": "#ffffff", "width": 4, "points": [[0.42, 0.42], [0.38, 0.55], [0.4, 0.75], [0.45, 0.85], [0.55, 0.85], [0.6, 0.75], [0.62, 0.55], [0.58, 0.42], [0.42, 0.42]] },
+    { "action": "fill", "color": "#ffffff", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#f39c12", "width": 4, "points": [[0.46, 0.32], [0.5, 0.28], [0.54, 0.32], [0.5, 0.35], [0.46, 0.32]] },
+    { "action": "fill", "color": "#f39c12", "x": 0.5, "y": 0.31 },
+    { "action": "gesture", "color": "#f39c12", "width": 4, "points": [[0.32, 0.85], [0.4, 0.88]] },
+    { "action": "gesture", "color": "#f39c12", "width": 4, "points": [[0.68, 0.85], [0.6, 0.88]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.44, 0.4], [0.44, 0.4]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.56, 0.4], [0.56, 0.4]] }
+  ],
+  
+  octopus: [
+    { "action": "gesture", "color": "#e91e63", "width": 5, "points": [[0.32, 0.5], [0.3, 0.35], [0.4, 0.25], [0.6, 0.25], [0.7, 0.35], [0.68, 0.5], [0.32, 0.5]] },
+    { "action": "fill", "color": "#ec407a", "x": 0.5, "y": 0.38 },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.32, 0.5], [0.25, 0.65], [0.3, 0.8], [0.25, 0.9]] },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.4, 0.5], [0.38, 0.68], [0.42, 0.85]] },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.48, 0.5], [0.48, 0.7], [0.46, 0.9]] },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.55, 0.5], [0.56, 0.7], [0.58, 0.88]] },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.62, 0.5], [0.65, 0.68], [0.62, 0.85]] },
+    { "action": "gesture", "color": "#e91e63", "width": 6, "points": [[0.68, 0.5], [0.75, 0.65], [0.72, 0.82]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.42, 0.35], [0.42, 0.35]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.58, 0.35], [0.58, 0.35]] }
+  ],
+  
+  kangaroo: [
+    { "action": "gesture", "color": "#a0522d", "width": 5, "points": [[0.4, 0.25], [0.35, 0.3], [0.33, 0.4], [0.35, 0.5], [0.3, 0.55], [0.32, 0.65], [0.4, 0.72], [0.45, 0.85], [0.4, 0.9], [0.55, 0.9], [0.55, 0.75], [0.6, 0.7], [0.62, 0.55], [0.58, 0.45], [0.52, 0.3], [0.45, 0.25], [0.4, 0.25]] },
+    { "action": "fill", "color": "#cd853f", "x": 0.45, "y": 0.45 },
+    { "action": "gesture", "color": "#a0522d", "width": 4, "points": [[0.55, 0.6], [0.7, 0.65], [0.75, 0.8], [0.68, 0.88]] },
+    { "action": "gesture", "color": "#a0522d", "width": 3, "points": [[0.34, 0.28], [0.3, 0.18]] },
+    { "action": "gesture", "color": "#a0522d", "width": 3, "points": [[0.4, 0.25], [0.4, 0.15]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.4, 0.32], [0.4, 0.32]] }
+  ],
+  
+  butterfly: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 4, "points": [[0.5, 0.25], [0.5, 0.8]] },
+    { "action": "gesture", "color": "#e91e63", "width": 3, "points": [[0.5, 0.35], [0.35, 0.2], [0.2, 0.3], [0.3, 0.45], [0.5, 0.45]] },
+    { "action": "fill", "color": "#f06292", "x": 0.35, "y": 0.32 },
+    { "action": "gesture", "color": "#e91e63", "width": 3, "points": [[0.5, 0.35], [0.65, 0.2], [0.8, 0.3], [0.7, 0.45], [0.5, 0.45]] },
+    { "action": "fill", "color": "#f06292", "x": 0.65, "y": 0.32 },
+    { "action": "gesture", "color": "#3498db", "width": 3, "points": [[0.5, 0.5], [0.35, 0.55], [0.25, 0.7], [0.35, 0.78], [0.5, 0.65]] },
+    { "action": "fill", "color": "#5dade2", "x": 0.35, "y": 0.65 },
+    { "action": "gesture", "color": "#3498db", "width": 3, "points": [[0.5, 0.5], [0.65, 0.55], [0.75, 0.7], [0.65, 0.78], [0.5, 0.65]] },
+    { "action": "fill", "color": "#5dade2", "x": 0.65, "y": 0.65 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.5, 0.25], [0.44, 0.15]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 2, "points": [[0.5, 0.25], [0.56, 0.15]] }
+  ],
+  
+  spider: [
+    { "action": "gesture", "color": "#1a1a1a", "width": 5, "points": [[0.42, 0.5], [0.4, 0.42], [0.44, 0.36], [0.5, 0.34], [0.56, 0.36], [0.6, 0.42], [0.58, 0.5], [0.42, 0.5]] },
+    { "action": "fill", "color": "#212121", "x": 0.5, "y": 0.42 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 6, "points": [[0.38, 0.62], [0.35, 0.5], [0.4, 0.5]] },
+    { "action": "fill", "color": "#212121", "x": 0.38, "y": 0.56 },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.42, 0.5], [0.25, 0.4]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.4, 0.55], [0.2, 0.52]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.4, 0.62], [0.22, 0.65]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.42, 0.68], [0.28, 0.8]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.6, 0.5], [0.75, 0.4]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.62, 0.55], [0.8, 0.52]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.62, 0.62], [0.78, 0.65]] },
+    { "action": "gesture", "color": "#1a1a1a", "width": 3, "points": [[0.6, 0.68], [0.72, 0.8]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 2, "points": [[0.46, 0.4], [0.46, 0.4]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 2, "points": [[0.54, 0.4], [0.54, 0.4]] }
+  ],
+  
+  parrot: [
+    { "action": "gesture", "color": "#2ecc71", "width": 5, "points": [[0.4, 0.3], [0.35, 0.4], [0.35, 0.55], [0.4, 0.68], [0.5, 0.75], [0.55, 0.85], [0.5, 0.9], [0.6, 0.88], [0.58, 0.75], [0.62, 0.6], [0.6, 0.42], [0.52, 0.3], [0.4, 0.3]] },
+    { "action": "fill", "color": "#27ae60", "x": 0.48, "y": 0.5 },
+    { "action": "gesture", "color": "#e74c3c", "width": 4, "points": [[0.35, 0.35], [0.25, 0.38], [0.28, 0.3]] },
+    { "action": "fill", "color": "#ff5252", "x": 0.3, "y": 0.34 },
+    { "action": "gesture", "color": "#f39c12", "width": 3, "points": [[0.35, 0.42], [0.24, 0.44], [0.35, 0.48]] },
+    { "action": "fill", "color": "#ffb74d", "x": 0.28, "y": 0.45 },
+    { "action": "gesture", "color": "#2ecc71", "width": 3, "points": [[0.55, 0.55], [0.7, 0.6], [0.68, 0.7], [0.55, 0.65]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.42, 0.38], [0.42, 0.38]] },
+    { "action": "gesture", "color": "#3498db", "width": 3, "points": [[0.42, 0.85], [0.42, 0.95]] },
+    { "action": "gesture", "color": "#3498db", "width": 3, "points": [[0.5, 0.85], [0.5, 0.97]] }
+  ],
+  
+  dolphin: [
+    { "action": "gesture", "color": "#5dade2", "width": 5, "points": [[0.15, 0.55], [0.25, 0.45], [0.4, 0.42], [0.55, 0.45], [0.7, 0.4], [0.85, 0.35], [0.78, 0.45], [0.65, 0.5], [0.55, 0.58], [0.4, 0.62], [0.25, 0.6], [0.15, 0.55]] },
+    { "action": "fill", "color": "#85c1e9", "x": 0.45, "y": 0.5 },
+    { "action": "gesture", "color": "#5dade2", "width": 3, "points": [[0.5, 0.42], [0.5, 0.28], [0.6, 0.4]] },
+    { "action": "gesture", "color": "#5dade2", "width": 3, "points": [[0.3, 0.58], [0.28, 0.7], [0.4, 0.6]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.25, 0.5], [0.25, 0.5]] },
+    { "action": "gesture", "color": "#5dade2", "width": 3, "points": [[0.15, 0.55], [0.08, 0.5]] }
+  ],
+  
+  crocodile: [
+    { "action": "gesture", "color": "#2e7d32", "width": 5, "points": [[0.1, 0.6], [0.25, 0.55], [0.4, 0.58], [0.55, 0.55], [0.7, 0.58], [0.85, 0.55], [0.9, 0.6], [0.85, 0.65], [0.55, 0.68], [0.25, 0.68], [0.1, 0.6]] },
+    { "action": "fill", "color": "#43a047", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#1b5e20", "width": 2, "points": [[0.6, 0.55], [0.85, 0.55]] },
+    { "action": "gesture", "color": "#1b5e20", "width": 2, "points": [[0.6, 0.68], [0.85, 0.68]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 3, "points": [[0.3, 0.5], [0.3, 0.55]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 3, "points": [[0.45, 0.5], [0.45, 0.55]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.15, 0.57], [0.15, 0.57]] }
+  ],
+  
+  peacock: [
+    { "action": "gesture", "color": "#1565c0", "width": 5, "points": [[0.45, 0.55], [0.42, 0.65], [0.45, 0.75], [0.5, 0.8], [0.55, 0.75], [0.58, 0.65], [0.55, 0.55], [0.45, 0.55]] },
+    { "action": "fill", "color": "#1976d2", "x": 0.5, "y": 0.65 },
+    { "action": "gesture", "color": "#1565c0", "width": 3, "points": [[0.48, 0.55], [0.45, 0.4], [0.5, 0.3]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.46, 0.42], [0.46, 0.42]] },
+    { "action": "gesture", "color": "#00897b", "width": 3, "points": [[0.5, 0.55], [0.35, 0.35], [0.3, 0.15]] },
+    { "action": "gesture", "color": "#00897b", "width": 3, "points": [[0.5, 0.55], [0.5, 0.3], [0.5, 0.1]] },
+    { "action": "gesture", "color": "#00897b", "width": 3, "points": [[0.5, 0.55], [0.65, 0.35], [0.7, 0.15]] },
+    { "action": "gesture", "color": "#26a69a", "width": 3, "points": [[0.5, 0.55], [0.4, 0.4], [0.4, 0.25]] },
+    { "action": "gesture", "color": "#26a69a", "width": 3, "points": [[0.5, 0.55], [0.6, 0.4], [0.6, 0.25]] },
+    { "action": "fill", "color": "#43a047", "x": 0.3, "y": 0.15 },
+    { "action": "fill", "color": "#43a047", "x": 0.5, "y": 0.1 },
+    { "action": "fill", "color": "#43a047", "x": 0.7, "y": 0.15 }
+  ],
+  
+  camel: [
+    { "action": "gesture", "color": "#c8a165", "width": 5, "points": [[0.25, 0.6], [0.22, 0.5], [0.28, 0.42], [0.35, 0.42], [0.4, 0.35], [0.48, 0.32], [0.5, 0.4], [0.55, 0.35], [0.62, 0.4], [0.6, 0.48], [0.65, 0.55], [0.65, 0.65], [0.25, 0.65], [0.25, 0.6]] },
+    { "action": "fill", "color": "#d4b483", "x": 0.45, "y": 0.5 },
+    { "action": "gesture", "color": "#c8a165", "width": 4, "points": [[0.5, 0.4], [0.55, 0.25], [0.62, 0.22], [0.6, 0.32]] },
+    { "action": "gesture", "color": "#c8a165", "width": 4, "points": [[0.28, 0.65], [0.28, 0.85]] },
+    { "action": "gesture", "color": "#c8a165", "width": 4, "points": [[0.4, 0.65], [0.4, 0.85]] },
+    { "action": "gesture", "color": "#c8a165", "width": 4, "points": [[0.55, 0.65], [0.55, 0.85]] },
+    { "action": "gesture", "color": "#c8a165", "width": 4, "points": [[0.65, 0.65], [0.65, 0.85]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.58, 0.27], [0.58, 0.27]] }
+  ],
+  
+  squirrel: [
+    { "action": "gesture", "color": "#a0522d", "width": 5, "points": [[0.35, 0.5], [0.32, 0.6], [0.35, 0.7], [0.42, 0.75], [0.4, 0.6], [0.4, 0.5], [0.35, 0.5]] },
+    { "action": "fill", "color": "#cd853f", "x": 0.38, "y": 0.6 },
+    { "action": "gesture", "color": "#a0522d", "width": 4, "points": [[0.4, 0.5], [0.35, 0.4], [0.38, 0.32], [0.45, 0.3], [0.48, 0.38]] },
+    { "action": "fill", "color": "#cd853f", "x": 0.42, "y": 0.38 },
+    { "action": "gesture", "color": "#a0522d", "width": 6, "points": [[0.42, 0.55], [0.55, 0.4], [0.65, 0.2], [0.6, 0.1], [0.55, 0.2], [0.5, 0.35], [0.4, 0.45]] },
+    { "action": "fill", "color": "#cd853f", "x": 0.55, "y": 0.25 },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.4, 0.35], [0.4, 0.35]] },
+    { "action": "gesture", "color": "#795548", "width": 2, "points": [[0.35, 0.42], [0.28, 0.4]] }
+  ],
+  
+  owl: [
+    { "action": "gesture", "color": "#795548", "width": 5, "points": [[0.35, 0.3], [0.3, 0.45], [0.3, 0.65], [0.38, 0.78], [0.5, 0.82], [0.62, 0.78], [0.7, 0.65], [0.7, 0.45], [0.65, 0.3], [0.5, 0.25], [0.35, 0.3]] },
+    { "action": "fill", "color": "#8d6e63", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#ffffff", "width": 3, "points": [[0.38, 0.42], [0.36, 0.5], [0.4, 0.56], [0.46, 0.52], [0.46, 0.44], [0.38, 0.42]] },
+    { "action": "fill", "color": "#f5f5f5", "x": 0.41, "y": 0.48 },
+    { "action": "gesture", "color": "#ffffff", "width": 3, "points": [[0.62, 0.42], [0.64, 0.5], [0.6, 0.56], [0.54, 0.52], [0.54, 0.44], [0.62, 0.42]] },
+    { "action": "fill", "color": "#f5f5f5", "x": 0.59, "y": 0.48 },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.41, 0.48], [0.41, 0.48]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.59, 0.48], [0.59, 0.48]] },
+    { "action": "gesture", "color": "#f39c12", "width": 3, "points": [[0.47, 0.58], [0.5, 0.63], [0.53, 0.58]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.35, 0.28], [0.4, 0.2]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.65, 0.28], [0.6, 0.2]] }
+  ],
+  
+  snail: [
+    { "action": "gesture", "color": "#8d6e63", "width": 5, "points": [[0.35, 0.7], [0.25, 0.65], [0.22, 0.55], [0.28, 0.48], [0.38, 0.48], [0.42, 0.56], [0.36, 0.6], [0.32, 0.56]] },
+    { "action": "fill", "color": "#a1887f", "x": 0.32, "y": 0.56 },
+    { "action": "gesture", "color": "#7cb342", "width": 5, "points": [[0.2, 0.75], [0.35, 0.7], [0.55, 0.72], [0.7, 0.75], [0.75, 0.8], [0.5, 0.83], [0.25, 0.8], [0.2, 0.75]] },
+    { "action": "fill", "color": "#9ccc65", "x": 0.5, "y": 0.77 },
+    { "action": "gesture", "color": "#7cb342", "width": 3, "points": [[0.2, 0.75], [0.15, 0.6], [0.2, 0.5]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.16, 0.5], [0.16, 0.5]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.24, 0.5], [0.24, 0.5]] }
+  ],
+  
+  goat: [
+    { "action": "gesture", "color": "#e0e0e0", "width": 5, "points": [[0.3, 0.45], [0.28, 0.35], [0.33, 0.28], [0.4, 0.3], [0.4, 0.4], [0.5, 0.38], [0.55, 0.42], [0.6, 0.4], [0.65, 0.45], [0.63, 0.6], [0.6, 0.68], [0.3, 0.68], [0.28, 0.55], [0.3, 0.45]] },
+    { "action": "fill", "color": "#f5f5f5", "x": 0.45, "y": 0.5 },
+    { "action": "gesture", "color": "#e0e0e0", "width": 4, "points": [[0.32, 0.68], [0.32, 0.85]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 4, "points": [[0.45, 0.68], [0.45, 0.85]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 4, "points": [[0.55, 0.68], [0.55, 0.85]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 4, "points": [[0.6, 0.68], [0.6, 0.85]] },
+    { "action": "gesture", "color": "#795548", "width": 3, "points": [[0.32, 0.32], [0.28, 0.22]] },
+    { "action": "gesture", "color": "#795548", "width": 3, "points": [[0.38, 0.28], [0.4, 0.18]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.32, 0.4], [0.32, 0.4]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.28, 0.46], [0.22, 0.5]] }
+  ],
+  
+  tortoise: [
+    { "action": "gesture", "color": "#33691e", "width": 5, "points": [[0.3, 0.45], [0.25, 0.55], [0.28, 0.68], [0.4, 0.75], [0.6, 0.75], [0.72, 0.68], [0.75, 0.55], [0.7, 0.45], [0.5, 0.4], [0.3, 0.45]] },
+    { "action": "fill", "color": "#558b2f", "x": 0.5, "y": 0.58 },
+    { "action": "gesture", "color": "#33691e", "width": 2, "points": [[0.5, 0.45], [0.4, 0.55], [0.5, 0.65], [0.6, 0.55], [0.5, 0.45]] },
+    { "action": "gesture", "color": "#7cb342", "width": 4, "points": [[0.25, 0.55], [0.15, 0.5], [0.12, 0.55]] },
+    { "action": "fill", "color": "#8bc34a", "x": 0.16, "y": 0.52 },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.13, 0.51], [0.13, 0.51]] },
+    { "action": "gesture", "color": "#7cb342", "width": 3, "points": [[0.35, 0.72], [0.35, 0.85]] },
+    { "action": "gesture", "color": "#7cb342", "width": 3, "points": [[0.65, 0.72], [0.65, 0.85]] }
+  ],
+  
+  flamingo: [
+    { "action": "gesture", "color": "#f06292", "width": 5, "points": [[0.5, 0.35], [0.45, 0.42], [0.45, 0.5], [0.5, 0.55], [0.55, 0.5], [0.55, 0.42], [0.5, 0.35]] },
+    { "action": "fill", "color": "#f48fb1", "x": 0.5, "y": 0.45 },
+    { "action": "gesture", "color": "#f06292", "width": 3, "points": [[0.5, 0.35], [0.45, 0.25], [0.35, 0.2], [0.3, 0.25]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.3, 0.25], [0.24, 0.24]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.38, 0.22], [0.38, 0.22]] },
+    { "action": "gesture", "color": "#f06292", "width": 4, "points": [[0.5, 0.55], [0.5, 0.7], [0.45, 0.8], [0.4, 0.9]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.4, 0.9], [0.35, 0.9]] },
+    { "action": "gesture", "color": "#f06292", "width": 3, "points": [[0.48, 0.7], [0.48, 0.75]] }
+  ],
+  
+  hedgehog: [
+    { "action": "gesture", "color": "#795548", "width": 5, "points": [[0.25, 0.7], [0.25, 0.55], [0.35, 0.45], [0.5, 0.4], [0.65, 0.45], [0.72, 0.55], [0.7, 0.65], [0.25, 0.7]] },
+    { "action": "fill", "color": "#8d6e63", "x": 0.45, "y": 0.55 },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.3, 0.5], [0.25, 0.4]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.35, 0.45], [0.32, 0.32]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.42, 0.42], [0.4, 0.28]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.5, 0.4], [0.5, 0.25]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.58, 0.42], [0.6, 0.28]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.65, 0.45], [0.68, 0.32]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.7, 0.5], [0.75, 0.4]] },
+    { "action": "gesture", "color": "#c8a165", "width": 3, "points": [[0.22, 0.62], [0.15, 0.6]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.18, 0.6], [0.18, 0.6]] }
+  ],
+  
+
+  koala: [
+    { "action": "gesture", "color": "#9e9e9e", "width": 5, "points": [[0.35, 0.42], [0.32, 0.55], [0.35, 0.7], [0.45, 0.78], [0.55, 0.78], [0.65, 0.7], [0.68, 0.55], [0.65, 0.42], [0.5, 0.35], [0.35, 0.42]] },
+    { "action": "fill", "color": "#bdbdbd", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#9e9e9e", "width": 5, "points": [[0.22, 0.35], [0.15, 0.4], [0.15, 0.5], [0.25, 0.5], [0.28, 0.4], [0.22, 0.35]] },
+    { "action": "fill", "color": "#e0e0e0", "x": 0.2, "y": 0.42 },
+    { "action": "gesture", "color": "#9e9e9e", "width": 5, "points": [[0.78, 0.35], [0.85, 0.4], [0.85, 0.5], [0.75, 0.5], [0.72, 0.4], [0.78, 0.35]] },
+    { "action": "fill", "color": "#e0e0e0", "x": 0.8, "y": 0.42 },
+    { "action": "gesture", "color": "#5d4037", "width": 4, "points": [[0.44, 0.55], [0.4, 0.58], [0.44, 0.62], [0.56, 0.62], [0.6, 0.58], [0.56, 0.55], [0.44, 0.55]] },
+    { "action": "fill", "color": "#6d4c41", "x": 0.5, "y": 0.58 },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.43, 0.47], [0.43, 0.47]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.57, 0.47], [0.57, 0.47]] }
+  ],
+
+  chameleon: [
+    { "action": "gesture", "color": "#66bb6a", "width": 5, "points": [[0.3, 0.5], [0.35, 0.4], [0.45, 0.35], [0.55, 0.4], [0.6, 0.5], [0.55, 0.58], [0.4, 0.58], [0.3, 0.5]] },
+    { "action": "fill", "color": "#81c784", "x": 0.45, "y": 0.48 },
+    { "action": "gesture", "color": "#66bb6a", "width": 4, "points": [[0.55, 0.5], [0.68, 0.48], [0.8, 0.55], [0.85, 0.65], [0.78, 0.6], [0.7, 0.55], [0.6, 0.55]] },
+    { "action": "gesture", "color": "#4caf50", "width": 3, "points": [[0.3, 0.52], [0.15, 0.55], [0.1, 0.65], [0.15, 0.7]] },
+    { "action": "gesture", "color": "#66bb6a", "width": 3, "points": [[0.4, 0.4], [0.35, 0.28], [0.4, 0.2]] },
+    { "action": "gesture", "color": "#66bb6a", "width": 3, "points": [[0.55, 0.65], [0.5, 0.8], [0.55, 0.9]] },
+    { "action": "gesture", "color": "#66bb6a", "width": 3, "points": [[0.4, 0.65], [0.35, 0.78], [0.3, 0.88]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.35, 0.42], [0.35, 0.42]] }
+  ],
+
+  walrus: [
+    { "action": "gesture", "color": "#a1887f", "width": 5, "points": [[0.25, 0.55], [0.25, 0.42], [0.32, 0.35], [0.5, 0.32], [0.68, 0.35], [0.75, 0.45], [0.75, 0.6], [0.68, 0.72], [0.32, 0.72], [0.25, 0.6], [0.25, 0.55]] },
+    { "action": "fill", "color": "#bcaaa4", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#8d6e63", "width": 2, "points": [[0.4, 0.55], [0.3, 0.55]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 2, "points": [[0.4, 0.6], [0.3, 0.62]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 2, "points": [[0.6, 0.55], [0.7, 0.55]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 2, "points": [[0.6, 0.6], [0.7, 0.62]] },
+    { "action": "gesture", "color": "#eceff1", "width": 3, "points": [[0.42, 0.65], [0.4, 0.8]] },
+    { "action": "gesture", "color": "#eceff1", "width": 3, "points": [[0.55, 0.65], [0.57, 0.8]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.4, 0.45], [0.4, 0.45]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.58, 0.45], [0.58, 0.45]] }
+  ],
+
+  jellyfish: [
+    { "action": "gesture", "color": "#ba68c8", "width": 4, "points": [[0.3, 0.4], [0.32, 0.3], [0.4, 0.25], [0.5, 0.24], [0.6, 0.25], [0.68, 0.3], [0.7, 0.4], [0.6, 0.45], [0.4, 0.45], [0.3, 0.4]] },
+    { "action": "fill", "color": "#ce93d8", "x": 0.5, "y": 0.33 },
+    { "action": "gesture", "color": "#ba68c8", "width": 3, "points": [[0.35, 0.45], [0.3, 0.6], [0.35, 0.75]] },
+    { "action": "gesture", "color": "#ba68c8", "width": 3, "points": [[0.45, 0.45], [0.42, 0.62], [0.45, 0.8]] },
+    { "action": "gesture", "color": "#ba68c8", "width": 3, "points": [[0.55, 0.45], [0.58, 0.62], [0.55, 0.8]] },
+    { "action": "gesture", "color": "#ba68c8", "width": 3, "points": [[0.65, 0.45], [0.7, 0.6], [0.65, 0.75]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.4, 0.35], [0.4, 0.35]] },
+    { "action": "gesture", "color": "#212121", "width": 2, "points": [[0.6, 0.35], [0.6, 0.35]] }
+  ],
+
+  rhinoceros: [
+    { "action": "gesture", "color": "#78909c", "width": 5, "points": [[0.25, 0.55], [0.22, 0.42], [0.3, 0.35], [0.45, 0.32], [0.6, 0.35], [0.7, 0.42], [0.72, 0.55], [0.68, 0.68], [0.25, 0.68], [0.25, 0.55]] },
+    { "action": "fill", "color": "#90a4ae", "x": 0.45, "y": 0.5 },
+    { "action": "gesture", "color": "#78909c", "width": 4, "points": [[0.28, 0.68], [0.28, 0.85]] },
+    { "action": "gesture", "color": "#78909c", "width": 4, "points": [[0.4, 0.68], [0.4, 0.85]] },
+    { "action": "gesture", "color": "#78909c", "width": 4, "points": [[0.55, 0.68], [0.55, 0.85]] },
+    { "action": "gesture", "color": "#78909c", "width": 4, "points": [[0.65, 0.68], [0.65, 0.85]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 4, "points": [[0.22, 0.5], [0.1, 0.48], [0.08, 0.4]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.15, 0.49], [0.1, 0.53]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.24, 0.45], [0.24, 0.45]] }
+  ],
+
+  seahorse: [
+    { "action": "gesture", "color": "#ff8a65", "width": 5, "points": [[0.5, 0.25], [0.55, 0.3], [0.58, 0.4], [0.55, 0.5], [0.6, 0.58], [0.58, 0.68], [0.5, 0.75], [0.42, 0.72], [0.42, 0.6], [0.48, 0.55], [0.42, 0.48], [0.42, 0.35], [0.48, 0.28], [0.5, 0.25]] },
+    { "action": "fill", "color": "#ffab91", "x": 0.5, "y": 0.45 },
+    { "action": "gesture", "color": "#ff8a65", "width": 3, "points": [[0.55, 0.25], [0.6, 0.2], [0.65, 0.22]] },
+    { "action": "gesture", "color": "#ff8a65", "width": 2, "points": [[0.48, 0.3], [0.44, 0.3]] },
+    { "action": "gesture", "color": "#ff8a65", "width": 2, "points": [[0.48, 0.4], [0.43, 0.4]] },
+    { "action": "gesture", "color": "#ff8a65", "width": 2, "points": [[0.5, 0.5], [0.45, 0.5]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.55, 0.28], [0.55, 0.28]] }
+  ],
+  pizza: [
+    { "action": "gesture", "color": "#e0a96d", "width": 5, "points": [[0.5, 0.2], [0.2, 0.75], [0.8, 0.75], [0.5, 0.2]] },
+    { "action": "fill", "color": "#f1c40f", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#c0392b", "width": 4, "points": [[0.5, 0.32], [0.35, 0.6]] },
+    { "action": "gesture", "color": "#c0392b", "width": 4, "points": [[0.5, 0.32], [0.65, 0.6]] },
+    { "action": "gesture", "color": "#c0392b", "width": 4, "points": [[0.5, 0.32], [0.5, 0.68]] },
+    { "action": "gesture", "color": "#c0392b", "width": 2, "points": [[0.42, 0.5], [0.42, 0.5]] },
+    { "action": "gesture", "color": "#c0392b", "width": 2, "points": [[0.58, 0.5], [0.58, 0.5]] },
+    { "action": "gesture", "color": "#c0392b", "width": 2, "points": [[0.5, 0.6], [0.5, 0.6]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 3, "points": [[0.2, 0.75], [0.8, 0.75]] }
+  ],
+  
+  "ice cream": [
+    { "action": "gesture", "color": "#8d6e63", "width": 4, "points": [[0.45, 0.55], [0.5, 0.9], [0.55, 0.55]] },
+    { "action": "gesture", "color": "#f8bbd0", "width": 5, "points": [[0.35, 0.55], [0.3, 0.4], [0.4, 0.3], [0.5, 0.35], [0.5, 0.55], [0.35, 0.55]] },
+    { "action": "fill", "color": "#f48fb1", "x": 0.4, "y": 0.45 },
+    { "action": "gesture", "color": "#fff59d", "width": 5, "points": [[0.5, 0.55], [0.5, 0.35], [0.6, 0.25], [0.68, 0.3], [0.65, 0.55], [0.5, 0.55]] },
+    { "action": "fill", "color": "#fff9c4", "x": 0.58, "y": 0.4 },
+    { "action": "gesture", "color": "#e74c3c", "width": 3, "points": [[0.55, 0.28], [0.55, 0.28]] }
+  ],
+  
+  banana: [
+    { "action": "gesture", "color": "#f1c40f", "width": 7, "points": [[0.3, 0.7], [0.28, 0.55], [0.32, 0.4], [0.42, 0.28], [0.55, 0.22], [0.68, 0.25]] },
+    { "action": "gesture", "color": "#d4a017", "width": 3, "points": [[0.3, 0.7], [0.26, 0.75], [0.3, 0.78]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 3, "points": [[0.65, 0.22], [0.72, 0.2]] },
+    { "action": "gesture", "color": "#c8a017", "width": 1, "points": [[0.33, 0.65], [0.36, 0.5], [0.42, 0.36]] }
+  ],
+  
+  watermelon: [
+    { "action": "gesture", "color": "#2e7d32", "width": 5, "points": [[0.2, 0.5], [0.25, 0.3], [0.5, 0.2], [0.75, 0.3], [0.8, 0.5], [0.2, 0.5]] },
+    { "action": "fill", "color": "#43a047", "x": 0.5, "y": 0.4 },
+    { "action": "gesture", "color": "#e74c3c", "width": 4, "points": [[0.27, 0.48], [0.32, 0.32], [0.5, 0.24], [0.68, 0.32], [0.73, 0.48], [0.27, 0.48]] },
+    { "action": "fill", "color": "#ff6659", "x": 0.5, "y": 0.4 },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.4, 0.38], [0.4, 0.38]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.5, 0.32], [0.5, 0.32]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.6, 0.38], [0.6, 0.38]] },
+    { "action": "gesture", "color": "#eeeeee", "width": 3, "points": [[0.2, 0.5], [0.8, 0.5]] }
+  ],
+  
+  samosa: [
+    { "action": "gesture", "color": "#d4a017", "width": 5, "points": [[0.3, 0.35], [0.7, 0.35], [0.5, 0.8], [0.3, 0.35]] },
+    { "action": "fill", "color": "#e0a96d", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#8d6e63", "width": 2, "points": [[0.3, 0.35], [0.7, 0.35]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 1, "points": [[0.4, 0.45], [0.55, 0.6]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 1, "points": [[0.55, 0.45], [0.42, 0.6]] }
+  ],
+  
+  mango: [
+    { "action": "gesture", "color": "#f39c12", "width": 5, "points": [[0.35, 0.35], [0.28, 0.5], [0.3, 0.68], [0.42, 0.8], [0.55, 0.78], [0.63, 0.65], [0.62, 0.48], [0.5, 0.32], [0.35, 0.35]] },
+    { "action": "fill", "color": "#f7c04a", "x": 0.45, "y": 0.55 },
+    { "action": "gesture", "color": "#e74c3c", "width": 3, "points": [[0.35, 0.35], [0.42, 0.4]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.5, 0.32], [0.55, 0.2], [0.65, 0.18]] }
+  ],
+  
+  noodles: [
+    { "action": "gesture", "color": "#607d8b", "width": 4, "points": [[0.2, 0.55], [0.8, 0.55], [0.75, 0.75], [0.25, 0.75], [0.2, 0.55]] },
+    { "action": "fill", "color": "#78909c", "x": 0.5, "y": 0.65 },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.3, 0.4], [0.35, 0.5], [0.4, 0.42], [0.45, 0.52], [0.5, 0.4]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.5, 0.42], [0.55, 0.52], [0.6, 0.4], [0.65, 0.5], [0.7, 0.4]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 3, "points": [[0.4, 0.6], [0.4, 0.6]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 3, "points": [[0.55, 0.62], [0.6, 0.6]] },
+    { "action": "gesture", "color": "#795548", "width": 4, "points": [[0.75, 0.4], [0.85, 0.6]] },
+    { "action": "gesture", "color": "#795548", "width": 4, "points": [[0.8, 0.4], [0.9, 0.6]] }
+  ],
+  
+  pancake: [
+    { "action": "gesture", "color": "#e0a96d", "width": 4, "points": [[0.25, 0.72], [0.75, 0.72], [0.72, 0.78], [0.28, 0.78], [0.25, 0.72]] },
+    { "action": "fill", "color": "#f4c481", "x": 0.5, "y": 0.75 },
+    { "action": "gesture", "color": "#d4915c", "width": 4, "points": [[0.28, 0.6], [0.72, 0.6], [0.75, 0.66], [0.25, 0.66], [0.28, 0.6]] },
+    { "action": "fill", "color": "#e0a96d", "x": 0.5, "y": 0.63 },
+    { "action": "gesture", "color": "#e0a96d", "width": 4, "points": [[0.3, 0.48], [0.7, 0.48], [0.72, 0.55], [0.28, 0.55], [0.3, 0.48]] },
+    { "action": "fill", "color": "#f4c481", "x": 0.5, "y": 0.51 },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.45, 0.4], [0.55, 0.4], [0.55, 0.46], [0.45, 0.46], [0.45, 0.4]] },
+    { "action": "fill", "color": "#fff176", "x": 0.5, "y": 0.43 },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.4, 0.6], [0.6, 0.66]] }
+  ],
+  
+  donut: [
+    { "action": "gesture", "color": "#8d6e63", "width": 5, "points": [[0.5, 0.3], [0.35, 0.35], [0.28, 0.5], [0.35, 0.65], [0.5, 0.7], [0.65, 0.65], [0.72, 0.5], [0.65, 0.35], [0.5, 0.3]] },
+    { "action": "fill", "color": "#e91e63", "x": 0.5, "y": 0.35 },
+    { "action": "gesture", "color": "#8d6e63", "width": 3, "points": [[0.5, 0.45], [0.44, 0.47], [0.42, 0.5], [0.44, 0.53], [0.5, 0.55], [0.56, 0.53], [0.58, 0.5], [0.56, 0.47], [0.5, 0.45]] },
+    { "action": "fill", "color": "#f5f5dc", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#3498db", "width": 3, "points": [[0.38, 0.38], [0.38, 0.38]] },
+    { "action": "gesture", "color": "#2ecc71", "width": 3, "points": [[0.45, 0.33], [0.45, 0.33]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 3, "points": [[0.58, 0.35], [0.58, 0.35]] },
+    { "action": "gesture", "color": "#9b59b6", "width": 3, "points": [[0.62, 0.42], [0.62, 0.42]] }
+  ],
+  
+  cupcake: [
+    { "action": "gesture", "color": "#e91e63", "width": 5, "points": [[0.35, 0.4], [0.3, 0.3], [0.4, 0.2], [0.5, 0.15], [0.6, 0.2], [0.7, 0.3], [0.65, 0.4], [0.35, 0.4]] },
+    { "action": "fill", "color": "#f06292", "x": 0.5, "y": 0.3 },
+    { "action": "gesture", "color": "#c0392b", "width": 4, "points": [[0.5, 0.15], [0.5, 0.15]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 4, "points": [[0.3, 0.4], [0.28, 0.6], [0.35, 0.8], [0.65, 0.8], [0.72, 0.6], [0.7, 0.4], [0.3, 0.4]] },
+    { "action": "fill", "color": "#a0522d", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.35, 0.5], [0.65, 0.55]] },
+    { "action": "gesture", "color": "#5d4037", "width": 2, "points": [[0.32, 0.65], [0.68, 0.7]] }
+  ],
+  
+  chili: [
+    { "action": "gesture", "color": "#c0392b", "width": 6, "points": [[0.4, 0.3], [0.45, 0.45], [0.5, 0.6], [0.55, 0.72], [0.6, 0.8], [0.62, 0.85]] },
+    { "action": "fill", "color": "#e74c3c", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.4, 0.3], [0.35, 0.22], [0.3, 0.2]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.4, 0.3], [0.42, 0.2], [0.38, 0.15]] },
+    { "action": "gesture", "color": "#ff5252", "width": 2, "points": [[0.45, 0.4], [0.42, 0.4]] }
+  ],
+  
+  coconut: [
+    { "action": "gesture", "color": "#5d4037", "width": 5, "points": [[0.3, 0.4], [0.25, 0.55], [0.3, 0.7], [0.45, 0.78], [0.6, 0.75], [0.7, 0.6], [0.68, 0.42], [0.55, 0.32], [0.4, 0.32], [0.3, 0.4]] },
+    { "action": "fill", "color": "#795548", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#3e2723", "width": 2, "points": [[0.35, 0.42], [0.4, 0.55]] },
+    { "action": "gesture", "color": "#3e2723", "width": 2, "points": [[0.45, 0.4], [0.5, 0.58]] },
+    { "action": "gesture", "color": "#3e2723", "width": 2, "points": [[0.55, 0.42], [0.58, 0.6]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.45, 0.35], [0.45, 0.35]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.5, 0.33], [0.5, 0.33]] },
+    { "action": "gesture", "color": "#212121", "width": 3, "points": [[0.55, 0.35], [0.55, 0.35]] }
+  ],
+  
+  pineapple: [
+    { "action": "gesture", "color": "#f1c40f", "width": 5, "points": [[0.35, 0.42], [0.3, 0.55], [0.32, 0.72], [0.4, 0.85], [0.6, 0.85], [0.68, 0.72], [0.7, 0.55], [0.65, 0.42], [0.35, 0.42]] },
+    { "action": "fill", "color": "#f7c04a", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.35, 0.48], [0.65, 0.55]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.35, 0.6], [0.65, 0.67]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.35, 0.72], [0.65, 0.78]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.4, 0.44], [0.55, 0.8]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.6, 0.44], [0.45, 0.8]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.5, 0.42], [0.45, 0.25], [0.4, 0.15]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.5, 0.42], [0.5, 0.22], [0.5, 0.1]] },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.5, 0.42], [0.55, 0.25], [0.6, 0.15]] }
+  ],
+  
+  popcorn: [
+    { "action": "gesture", "color": "#e74c3c", "width": 4, "points": [[0.32, 0.5], [0.68, 0.5], [0.75, 0.85], [0.25, 0.85], [0.32, 0.5]] },
+    { "action": "fill", "color": "#ff5252", "x": 0.5, "y": 0.7 },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.4, 0.55], [0.4, 0.8]] },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.5, 0.55], [0.5, 0.82]] },
+    { "action": "gesture", "color": "#ffffff", "width": 2, "points": [[0.6, 0.55], [0.6, 0.8]] },
+    { "action": "gesture", "color": "#fff9c4", "width": 6, "points": [[0.3, 0.5], [0.25, 0.4], [0.32, 0.32], [0.4, 0.38], [0.4, 0.3], [0.5, 0.25], [0.55, 0.35], [0.62, 0.3], [0.68, 0.38], [0.62, 0.42], [0.7, 0.5]] },
+    { "action": "fill", "color": "#fffde7", "x": 0.45, "y": 0.35 }
+  ],
+  
+  sandwich: [
+    { "action": "gesture", "color": "#e0a96d", "width": 4, "points": [[0.2, 0.55], [0.5, 0.35], [0.8, 0.55], [0.72, 0.6], [0.28, 0.6], [0.2, 0.55]] },
+    { "action": "fill", "color": "#f4c481", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#7cb342", "width": 4, "points": [[0.25, 0.6], [0.75, 0.6]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 4, "points": [[0.25, 0.65], [0.75, 0.65]] },
+    { "action": "gesture", "color": "#fff176", "width": 4, "points": [[0.25, 0.7], [0.75, 0.7]] },
+    { "action": "gesture", "color": "#e0a96d", "width": 4, "points": [[0.22, 0.72], [0.5, 0.85], [0.78, 0.72], [0.7, 0.75], [0.3, 0.75], [0.22, 0.72]] },
+    { "action": "fill", "color": "#f4c481", "x": 0.5, "y": 0.78 }
+  ],
+  
+  strawberry: [
+    { "action": "gesture", "color": "#e74c3c", "width": 5, "points": [[0.5, 0.35], [0.3, 0.45], [0.28, 0.65], [0.4, 0.85], [0.5, 0.9], [0.6, 0.85], [0.72, 0.65], [0.7, 0.45], [0.5, 0.35]] },
+    { "action": "fill", "color": "#ff5252", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#2e7d32", "width": 4, "points": [[0.4, 0.35], [0.35, 0.25], [0.45, 0.28], [0.5, 0.2], [0.55, 0.28], [0.65, 0.25], [0.6, 0.35]] },
+    { "action": "fill", "color": "#43a047", "x": 0.5, "y": 0.28 },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.42, 0.5], [0.42, 0.5]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.55, 0.55], [0.55, 0.55]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.45, 0.68], [0.45, 0.68]] },
+    { "action": "gesture", "color": "#f1c40f", "width": 2, "points": [[0.58, 0.7], [0.58, 0.7]] }
+  ],
+  
+  dumpling: [
+    { "action": "gesture", "color": "#f5f5dc", "width": 5, "points": [[0.25, 0.55], [0.28, 0.7], [0.4, 0.78], [0.6, 0.78], [0.72, 0.7], [0.75, 0.55], [0.62, 0.4], [0.38, 0.4], [0.25, 0.55]] },
+    { "action": "fill", "color": "#faf5e9", "x": 0.5, "y": 0.6 },
+    { "action": "gesture", "color": "#e0dcc8", "width": 2, "points": [[0.4, 0.4], [0.45, 0.35], [0.5, 0.4]] },
+    { "action": "gesture", "color": "#e0dcc8", "width": 2, "points": [[0.48, 0.38], [0.53, 0.34], [0.58, 0.4]] },
+    { "action": "gesture", "color": "#e0dcc8", "width": 2, "points": [[0.55, 0.38], [0.6, 0.35], [0.63, 0.42]] }
+  ],
+  
+  pretzel: [
+    { "action": "gesture", "color": "#a0522d", "width": 6, "points": [[0.35, 0.3], [0.25, 0.4], [0.25, 0.55], [0.4, 0.6], [0.55, 0.5], [0.7, 0.6], [0.8, 0.5], [0.75, 0.35], [0.6, 0.3], [0.5, 0.4], [0.55, 0.55], [0.4, 0.65], [0.3, 0.55]] },
+    { "action": "fill", "color": "#c8935c", "x": 0.5, "y": 0.45 },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.35, 0.35], [0.35, 0.35]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.55, 0.42], [0.55, 0.42]] },
+    { "action": "gesture", "color": "#e0e0e0", "width": 2, "points": [[0.65, 0.4], [0.65, 0.4]] }
+  ],
+  
+  omelette: [
+    { "action": "gesture", "color": "#f1c40f", "width": 4, "points": [[0.25, 0.5], [0.2, 0.6], [0.3, 0.7], [0.5, 0.75], [0.7, 0.72], [0.8, 0.6], [0.75, 0.48], [0.6, 0.4], [0.4, 0.4], [0.25, 0.5]] },
+    { "action": "fill", "color": "#fff176", "x": 0.5, "y": 0.55 },
+    { "action": "gesture", "color": "#2e7d32", "width": 2, "points": [[0.4, 0.55], [0.5, 0.55]] },
+    { "action": "gesture", "color": "#e74c3c", "width": 2, "points": [[0.55, 0.6], [0.62, 0.58]] },
+    { "action": "gesture", "color": "#795548", "width": 2, "points": [[0.45, 0.65], [0.55, 0.65]] }
+  ],
+  
+  jalebi: [
+    { "action": "gesture", "color": "#f39c12", "width": 4, "points": [[0.5, 0.5], [0.35, 0.4], [0.3, 0.55], [0.45, 0.65], [0.55, 0.5], [0.4, 0.42], [0.35, 0.52], [0.42, 0.6], [0.5, 0.5]] },
+    { "action": "fill", "color": "#ff9800", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#f39c12", "width": 4, "points": [[0.5, 0.5], [0.65, 0.4], [0.7, 0.55], [0.55, 0.65], [0.45, 0.5], [0.6, 0.42], [0.65, 0.52], [0.58, 0.6], [0.5, 0.5]] },
+    { "action": "fill", "color": "#ff9800", "x": 0.6, "y": 0.5 },
+    { "action": "gesture", "color": "#e67e22", "width": 1, "points": [[0.3, 0.45], [0.7, 0.45]] }
+  ],
+  
+  popsicle: [
+    { "action": "gesture", "color": "#e74c3c", "width": 5, "points": [[0.4, 0.3], [0.35, 0.5], [0.38, 0.6], [0.62, 0.6], [0.65, 0.5], [0.6, 0.3], [0.4, 0.3]] },
+    { "action": "fill", "color": "#ff5252", "x": 0.5, "y": 0.45 },
+    { "action": "gesture", "color": "#c0392b", "width": 2, "points": [[0.5, 0.3], [0.5, 0.6]] },
+    { "action": "gesture", "color": "#8d6e63", "width": 4, "points": [[0.5, 0.6], [0.5, 0.85]] }
+  ],
+  
+  avocado: [
+    { "action": "gesture", "color": "#2e7d32", "width": 5, "points": [[0.35, 0.3], [0.28, 0.45], [0.3, 0.65], [0.4, 0.8], [0.5, 0.85], [0.6, 0.8], [0.68, 0.6], [0.65, 0.4], [0.55, 0.28], [0.35, 0.3]] },
+    { "action": "fill", "color": "#7cb342", "x": 0.4, "y": 0.5 },
+    { "action": "gesture", "color": "#f4d03f", "width": 3, "points": [[0.42, 0.35], [0.38, 0.5], [0.42, 0.65], [0.55, 0.7], [0.65, 0.6], [0.62, 0.42], [0.5, 0.32], [0.42, 0.35]] },
+    { "action": "fill", "color": "#f9e79f", "x": 0.48, "y": 0.5 },
+    { "action": "gesture", "color": "#8d6e63", "width": 5, "points": [[0.55, 0.5], [0.55, 0.5]] },
+    { "action": "fill", "color": "#a0522d", "x": 0.55, "y": 0.5 }
+  ],
+  
+  biscuit: [
+    { "action": "gesture", "color": "#c8935c", "width": 5, "points": [[0.35, 0.4], [0.3, 0.5], [0.35, 0.62], [0.5, 0.68], [0.65, 0.62], [0.7, 0.5], [0.65, 0.4], [0.5, 0.35], [0.35, 0.4]] },
+    { "action": "fill", "color": "#dba86b", "x": 0.5, "y": 0.5 },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.42, 0.45], [0.42, 0.45]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.5, 0.48], [0.5, 0.48]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.58, 0.45], [0.58, 0.45]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.45, 0.58], [0.45, 0.58]] },
+    { "action": "gesture", "color": "#a0522d", "width": 2, "points": [[0.55, 0.58], [0.55, 0.58]] }
+  ],
 };
