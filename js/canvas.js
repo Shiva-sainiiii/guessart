@@ -19,7 +19,7 @@ const DrawCanvas = (() => {
   // in the order they happened so redraw/undo replays everything correctly.
   let strokeHistory = [];
   let currentGesture = null;
-  const MAX_HISTORY = 60;   // cap so long sessions don't grow memory unbounded
+  const MAX_HISTORY = 150;   // cap so long sessions don't grow memory unbounded — raised from 60 now that a single continuous gesture is one entry regardless of point count (see renderRemoteStroke's chaining), so this cap now roughly limits "number of distinct pen-lifts/fills", not "number of segments"
 
   function redrawAll() {
     const rect = canvas.getBoundingClientRect();
@@ -288,16 +288,50 @@ const DrawCanvas = (() => {
       canvas.addEventListener('touchcancel', handleEnd);
     },
 
-    // Called when a stroke arrives from the remote peer. The guesser's
-    // canvas doesn't need undo (only the drawer can undo), so we just
-    // paint it directly rather than tracking a parallel history there.
+    // Called when a stroke arrives from the remote peer. Pushed into the
+    // same strokeHistory the drawer's own strokes use — NOT just painted
+    // directly — because resizeCanvas() repaints entirely FROM
+    // strokeHistory whenever the canvas's backing size changes (keyboard
+    // open/close, a hint tile row appearing/disappearing, orientation
+    // changes, etc). A guesser's canvas resizes just as often as a
+    // drawer's does; painting remote strokes without recording them
+    // meant every one of those resizes wiped the guesser's screen back
+    // to blank, discarding everything the drawer had drawn so far.
+    //
+    // Consecutive segments are merged into the SAME history entry when
+    // they visibly chain together (this segment's start ≈ the previous
+    // segment's end, same color/width/erase) — exactly mirroring how the
+    // local drawer's own handleMove() accumulates one pointer-drag into
+    // one currentGesture before pushing a single history entry in
+    // handleEnd(). Without this, a single continuous pen-drag (or the
+    // bot's multi-point sketch lines) would arrive as dozens of
+    // one-segment history entries instead of one gesture, blowing
+    // through MAX_HISTORY many times faster and dropping the EARLIEST
+    // parts of the drawing off the front on every resize.
     renderRemoteStroke(stroke) {
       drawSegmentRaw(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, stroke.width, stroke.erase);
+
+      const last = strokeHistory[strokeHistory.length - 1];
+      const lastSeg = last && !last.fill ? last.segments[last.segments.length - 1] : null;
+      const chains = lastSeg
+        && Math.abs(lastSeg.x2 - stroke.x1) < 0.001 && Math.abs(lastSeg.y2 - stroke.y1) < 0.001
+        && lastSeg.color === stroke.color && lastSeg.width === stroke.width && !!lastSeg.erase === !!stroke.erase;
+
+      if (chains) {
+        last.segments.push(stroke);
+      } else {
+        strokeHistory.push({ segments: [stroke] });
+        if (strokeHistory.length > MAX_HISTORY) strokeHistory.shift();
+      }
     },
 
-    // Called when a fill action arrives from the remote peer.
+    // Called when a fill action arrives from the remote peer. Same
+    // reasoning as renderRemoteStroke above — must be recorded so a
+    // mid-round resize's redrawAll() can reproduce it.
     renderRemoteFill(fillData) {
       floodFillRaw(fillData.x, fillData.y, fillData.color);
+      strokeHistory.push({ fill: fillData });
+      if (strokeHistory.length > MAX_HISTORY) strokeHistory.shift();
     },
 
     // Drawer-side undo: pop the last entry (stroke gesture OR fill),

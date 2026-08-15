@@ -5,6 +5,45 @@ Peer-to-peer via WebRTC (PeerJS) — no backend, no database.
 
 _Formerly known as Sketch Duel — renamed to GuessArt._
 
+## Phase 2.10: Three critical bot/canvas bugs fixed
+
+- **Bot drawing was painfully slow, sometimes timing out**: `BotPeer`'s
+  `emit()` was tacking a 250-650ms randomized "network latency" delay
+  onto EVERY message — including every individual stroke segment of a
+  drawing. That delay stacked on top of the drawing's own pacing
+  (already spread across ~45s), so a detailed sketch could take 2-3x
+  longer than intended to finish, sometimes eating past the 70-second
+  round timer before it was even done. Fixed: stroke/fill messages now
+  get a small 15-40ms jitter instead; only one-off messages (chat,
+  hello, clues) keep the human-like delay.
+- **Bot went completely silent as guesser from round 2 onward**: when a
+  round ended, `showRoundResult()` was calling `advanceTurn()` (which
+  immediately fires off `word_length`/`hint_reveal`/`clue` messages for
+  whoever draws next) BEFORE sending the `next_turn` message that tells
+  `BotPeer` whose turn it actually is now. So every round after the
+  first, the bot received the new word's pattern/hints/clues while its
+  internal `botIsDrawer` flag still held the PREVIOUS round's value —
+  the guard checks silently dropped all of it, leaving the bot with no
+  information to guess from. Fixed by sending `next_turn` first, and
+  additionally hardened `BotPeer` to fully reset its guesser state on
+  every turn transition so no stale pattern/tried-guesses data can leak
+  into a new round even if a future change reintroduces a similar
+  ordering issue.
+- **Canvas going blank mid-round (both bot AND real-friend games)**:
+  `DrawCanvas.renderRemoteStroke()`/`renderRemoteFill()` — the functions
+  that paint a stroke arriving from the OTHER player — were only
+  painting directly onto the canvas, never recording it into
+  `strokeHistory`. Any time the canvas resized (a hint tile row
+  appearing, keyboard open/close, orientation changes — anything that
+  changes the draw area's layout), `resizeCanvas()` clears the canvas
+  and repaints strictly from `strokeHistory` — which, for the person
+  guessing, was always empty. Every resize wiped their screen back to
+  blank, discarding everything the other player had drawn so far. Now
+  every remote stroke/fill is recorded (consecutive same-gesture
+  segments are merged into one history entry, mirroring how the local
+  drawer's own pointer-drag becomes one entry, so `MAX_HISTORY` — raised
+  from 60 to 150 — isn't blown through by a single detailed sketch).
+
 ## Phase 2.9: Play Again, separated Create/Join, and Play with Computer
 
 - **Play Again (rematch)**: the game-over screen previously only had a

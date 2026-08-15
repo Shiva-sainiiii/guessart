@@ -563,8 +563,20 @@ const BotPeer = (() => {
   const ROUND_SECONDS = 70; // must match Game's ROUND_SECONDS (js/game.js) so bot-as-drawer timeouts land at the same moment the human's own timer UI hits 0
 
   function emit(data) {
-    // Simulate real network latency so bot messages don't feel instant/robotic.
-    const delay = 250 + Math.random() * 400;
+    // Simulate real network latency so bot messages don't feel instant/
+    // robotic — EXCEPT for individual drawing strokes/fills. Those are
+    // already paced out one-by-one by startBotDrawing()'s own tick()
+    // loop (perItem, computed to spread the whole sketch across ~45s),
+    // so stacking an extra 250-650ms randomized "network" delay on TOP
+    // of every single stroke was compounding with that pacing and made
+    // the sketch visibly crawl — a word with ~20-30 stroke segments
+    // could take 2-3x longer to finish appearing than intended, often
+    // eating into/past the 70s round timer before the drawing was even
+    // done. Strokes/fills still get a small fixed jitter so they don't
+    // feel like they're teleporting in, but nowhere near the delay a
+    // one-off chat message or a hint reveal gets.
+    const isDrawingItem = data.type === 'stroke' || data.type === 'fill';
+    const delay = isDrawingItem ? (15 + Math.random() * 25) : (250 + Math.random() * 400);
     setTimeout(() => {
       messageHandlers.forEach(fn => fn(data));
     }, delay);
@@ -576,6 +588,22 @@ const BotPeer = (() => {
     clearTimeout(roundTimeoutTimer);
     drawQueue = [];
     roundOver = false;
+    // guesserState must NOT survive into a new turn. Without this reset,
+    // a round where the bot draws (no guesserState touched at all) left
+    // the PREVIOUS round's guesser state (its old pattern, its old
+    // triedGuesses set, and critically its old knownAnswer) sitting
+    // around. Two rounds later when the bot became guesser again,
+    // chooseGuessLocal()'s very first check
+    // (`if (state.knownAnswer && ...) return state.knownAnswer`) could
+    // fire on that STALE knownAnswer before the new round's word_length/
+    // clue messages ever arrived to correct it — silently guessing the
+    // previous round's word, or (once triedGuesses already contained
+    // every plausible candidate from last time) finding nothing left to
+    // say and going quiet for the rest of the round. startBotGuessing()
+    // already creates a fresh state on its own, so this null just
+    // guarantees no stale object is reachable in the gap between one
+    // turn ending and the next one's setup running.
+    guesserState = null;
   }
 
   // Paces out the bot's drawing plan as a sequence of stroke messages,

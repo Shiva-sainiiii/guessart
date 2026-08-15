@@ -770,8 +770,24 @@ function showRoundResult(wasGuessed, word) {
     setTimeout(() => {
       if (amHost) {
         const nextDrawerIsHost = (Game.getRoundNumber() % 2 === 0); // alternate turns
-        advanceTurn(nextDrawerIsHost);
+        // IMPORTANT ORDER: tell the peer about the turn switch BEFORE
+        // running our own advanceTurn(). advanceTurn() -> beginTurnLocal()
+        // immediately fires off Net.send({type:'word_length'/'hint_reveal'
+        // /'clue', ...}) when we're the next drawer. In a bot game, Net IS
+        // BotPeer, and BotPeer.send() only updates its internal
+        // `botIsDrawer` flag inside its 'next_turn' case handler — so
+        // sending 'next_turn' AFTER those word_length/hint/clue messages
+        // meant BotPeer was still holding the PREVIOUS round's
+        // botIsDrawer value while processing them. From round 2 onward
+        // this silently dropped every word_length/hint_reveal/clue the
+        // bot needed to guess with (it never got fed a pattern), which
+        // is exactly why the bot guessed fine on round 1 (lucky default
+        // state) but sat completely silent as guesser on every later
+        // round. Sending 'next_turn' first ensures BotPeer's
+        // botIsDrawer is already correct by the time the real content
+        // messages arrive right behind it.
         Net.send({ type: 'next_turn', drawerIsMe: nextDrawerIsHost });
+        advanceTurn(nextDrawerIsHost);
       }
     }, 2500);
   } else {
