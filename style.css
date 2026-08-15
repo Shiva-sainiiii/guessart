@@ -1413,17 +1413,61 @@ button {
   font-size: 14px;
   font-family: inherit;
 }
-.contact-select:focus,
 .contact-input:focus,
 .contact-textarea:focus {
   outline: none;
   border-color: var(--primary);
 }
 .contact-textarea { resize: vertical; min-height: 90px; }
-/* Native <select> arrow doesn't inherit color on some Android browsers —
-   force the option list to render dark so it doesn't flash white-on-white. */
-.contact-select { appearance: none; -webkit-appearance: none; }
-.contact-select option { background: var(--bg-card); color: var(--text); }
+
+/* Custom themed dropdown for Subject — replaces the native <select>,
+   whose OS-rendered option list can't be restyled and looked jarring
+   (light popup on a dark form). Built from the same button+menu pattern
+   as the home-screen language picker, so it's consistent app-wide. */
+.contact-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.contact-select-btn.has-value { color: var(--text); }
+.contact-select-btn .icon { color: var(--text-dim); flex-shrink: 0; transition: transform 0.15s ease; }
+.contact-select-btn[aria-expanded="true"] .icon { transform: rotate(180deg); }
+
+.contact-select-menu {
+  position: relative;
+  margin-top: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.contact-select-menu.hidden { display: none; }
+
+.contact-select-option {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.contact-select-option:active { background: var(--bg-card); }
+.contact-select-option.active { background: rgba(45,212,167,0.14); color: var(--primary); }
 
 /* Simple on/off pill switch, reused for every toggle in the panel. */
 .toggle-switch {
@@ -1454,39 +1498,17 @@ button {
 }
 
 /* ================= SEO / About Section =================
-   Lives inside #screen-home as a native <details> element — NOT
-   display:none, NOT positioned off-screen. Collapsed by default so
-   the primary create/join UI is untouched, but the content is fully
-   present in the HTML (Google indexes <details> content even while
-   closed) and one tap away for real users. No viewport-height/scroll
-   math involved, so this can't be knocked out of position by keyboard
-   or address-bar resizing the way the old scroll-based layout could. */
+   Shown directly in normal document flow below the primary card — no
+   collapse/expand, no scroll-clipped inner box. Full content is always
+   visible and indexed, and reachable by simply scrolling the page. */
 .about-details {
   width: 100%;
   max-width: 420px;
   margin-top: 20px;
   text-align: left;
 }
-.about-summary {
-  cursor: pointer;
-  list-style: none;
-  font-size: 13px;
-  color: var(--text-dim);
-  text-align: center;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-card);
-  user-select: none;
-}
-.about-summary::-webkit-details-marker { display: none; }
-.about-summary:hover { color: var(--primary); border-color: var(--primary); }
-.about-details[open] .about-summary { margin-bottom: 12px; border-radius: var(--radius) var(--radius) 0 0; }
 
 .about-inner {
-  max-height: 60vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding: 20px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -1539,3 +1561,42 @@ button {
 .feature-card p { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
 
 .about-footer { font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 16px; line-height: 1.5; }
+
+/* Legal links row — "Game Rules | Terms of Service | Privacy Policy",
+   sits below the About block. Each opens its own bottom sheet. */
+.legal-links {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  padding-bottom: 8px;
+}
+.legal-link {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.legal-link:active { color: var(--primary); }
+.legal-sep { color: var(--border); font-size: 12px; }
+
+/* Legal bottom sheets (Rules/Terms/Privacy) — taller max-height than the
+   Settings panel since this is prose content, not a few toggle rows. */
+.legal-panel { max-height: 85vh; }
+.legal-body { padding: 4px 0 8px; }
+.legal-body p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+.legal-body p:last-child { margin-bottom: 0; }
