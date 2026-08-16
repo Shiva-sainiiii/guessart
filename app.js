@@ -239,7 +239,6 @@ const LangManager = (function setupLang() {
   const LANG_STRINGS = {
     en: {
       tagline: 'draw. guess. roast your friend.',
-      namePlaceholder: 'e.g. Priya',
       playFriend: 'Play with Friend',
       playComputer: 'Play with Computer',
       createRoom: 'Create Room',
@@ -248,7 +247,6 @@ const LangManager = (function setupLang() {
     },
     hi: {
       tagline: 'banao. pehchano. dost ko roast karo.',
-      namePlaceholder: 'jaise Priya',
       playFriend: 'Dost ke saath khelo',
       playComputer: 'Computer ke saath khelo',
       createRoom: 'Room banao',
@@ -276,11 +274,15 @@ const LangManager = (function setupLang() {
   function apply(lang) {
     const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
     const tagline = document.querySelector('.tagline');
-    const nameInput = document.getElementById('input-name');
     const roomHint = document.querySelector('.mode-hint');
 
     if (tagline) tagline.textContent = s.tagline;
-    if (nameInput) nameInput.setAttribute('placeholder', s.namePlaceholder);
+    // Deliberately NOT touching #input-name here: the nickname field has
+    // no native placeholder attribute at all (see index.html) — "Enter
+    // Nickname" / "e.g. Rahul" etc. is entirely driven by the animated
+    // #placeholder-text span (slidingPlaceholder() below). Setting a
+    // native placeholder on top of that renders BOTH at once, which is
+    // exactly the double-text overlap bug this comment prevents regressing.
 
     setTrailingText(document.getElementById('tab-mode-friend'), s.playFriend);
     setTrailingText(document.getElementById('tab-mode-bot'), s.playComputer);

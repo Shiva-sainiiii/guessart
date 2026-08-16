@@ -1719,8 +1719,8 @@ body[data-theme="light"] {
   --text-dim: #5c6673;
   --success: #2f9e5e;
   --border: #e1e5eb;
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(20, 30, 45, 0.10);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(20, 30, 45, 0.08);
 }
 body[data-theme="light"] .home-corner-btn,
 body[data-theme="light"] .settings-gear-btn {
@@ -1739,3 +1739,11 @@ body[data-theme="light"] .btn-secondary {
   color: var(--text-dim);
 }
 body[data-theme="light"] .segmented-toggle { background: #eef1f5; }
+body[data-theme="light"] .btn:disabled {
+  background: #eef1f5 !important;
+  color: #9aa4af !important;
+  border-color: #dde2e8;
+}
+body[data-theme="light"] #app-viewport {
+  background-image: radial-gradient(circle at 50% 0%, rgba(45,212,167,0.10), transparent 60%);
+}
