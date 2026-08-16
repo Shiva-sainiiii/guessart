@@ -1709,41 +1709,74 @@ button {
 .segmented-option.active { background: var(--primary); color: #062019; }
 
 /* ===== LIGHT THEME ===== */
+/* Same personality as dark mode — mint primary, coral accent, teal-tinted
+   surfaces — just inverted to a bright base instead of flattening
+   everything to gray-on-white. Inactive/secondary elements use pale
+   TINTS of the brand colors (mint/coral washes) rather than neutral
+   gray, so the palette still reads as colorful, not a grayscale mode. */
 body[data-theme="light"] {
-  --bg: #e8edf4;
-  --bg-card: #ffffff;
-  --primary: #2dd4a7;
-  --primary-dark: #1fae87;
-  --accent: #e0603f;
-  --text: #17202e;
-  --text-dim: #5c6673;
-  --success: #2f9e5e;
-  --border: #e1e5eb;
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(20, 30, 45, 0.08);
+  --bg: #eef7f3;
+  --bg-card: #fffdf9;
+  --primary: #14b892;
+  --primary-dark: #0f9678;
+  --accent: #ff6b47;
+  --text: #142621;
+  --text-dim: #5c766e;
+  --success: #1fae6e;
+  --border: #cfe8dd;
+  --glass-bg: rgba(255, 253, 249, 0.90);
+  --glass-border: rgba(20, 100, 80, 0.12);
 }
+
+body[data-theme="light"] #app-viewport {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255,107,71,0.10), transparent 45%),
+    radial-gradient(circle at 88% 8%, rgba(20,184,146,0.16), transparent 50%),
+    var(--bg);
+}
+
 body[data-theme="light"] .home-corner-btn,
 body[data-theme="light"] .settings-gear-btn {
-  color: var(--text-dim);
-  background: #eef1f5;
-  border-color: #dde2e8;
+  color: var(--primary-dark);
+  background: #ffffff;
+  border-color: var(--border);
 }
-body[data-theme="light"] .settings-backdrop { background: rgba(15, 25, 35, 0.35); }
+
+body[data-theme="light"] .settings-backdrop { background: rgba(10, 40, 32, 0.38); }
+
 body[data-theme="light"] .card,
-body[data-theme="light"] .settings-panel { box-shadow: 0 8px 28px rgba(30, 40, 60, 0.10); }
-body[data-theme="light"] input[type="text"] { border-color: #1c2e3d; }
+body[data-theme="light"] .settings-panel {
+  box-shadow: 0 10px 32px rgba(15, 100, 75, 0.10);
+}
+
+body[data-theme="light"] input[type="text"] {
+  border-color: #0f3d32;
+  background: #ffffff;
+}
+
+/* Inactive tab/segment/secondary fills: a pale mint wash instead of
+   neutral gray — keeps the "colorful, branded" feel even in the
+   unselected state. */
 body[data-theme="light"] .mode-tab:not(.active),
 body[data-theme="light"] .subtab:not(.active),
 body[data-theme="light"] .btn-secondary {
-  background: #e3e7ec;
-  color: var(--text-dim);
+  background: #dcf0e8;
+  color: var(--primary-dark);
 }
-body[data-theme="light"] .segmented-toggle { background: #eef1f5; }
+
+body[data-theme="light"] .segmented-toggle { background: #e4f3ec; }
+
 body[data-theme="light"] .btn:disabled {
-  background: #eef1f5 !important;
-  color: #9aa4af !important;
-  border-color: #dde2e8;
+  background: #e4f3ec !important;
+  color: #7fa398 !important;
+  border-color: var(--border);
 }
-body[data-theme="light"] #app-viewport {
-  background-image: radial-gradient(circle at 50% 0%, rgba(45,212,167,0.10), transparent 60%);
+
+/* Info/how-to-play blocks and step number chips read flat without an
+   accent — give the numbered circles the coral accent instead of
+   plain green so the page has two colors doing visible work, same as
+   dark mode's mint+coral pairing. */
+body[data-theme="light"] .how-to-steps li::before {
+  background: var(--accent);
+  color: #fff8f5;
 }
