@@ -382,12 +382,12 @@ const BotBrain = (() => {
   // one is known, which reads as far more "thinking" than a random word.
   const CATEGORY_BOUNDS = [
     { name: 'objects', start: 0, end: 30 },
-    { name: 'animals', start: 30, end: 63 },
-    { name: 'food', start: 63, end: 88 },
-    { name: 'nature', start: 88, end: 111 },
-    { name: 'actions', start: 111, end: 132 },
-    { name: 'fantasy', start: 132, end: 153 },
-    { name: 'india', start: 153, end: 999 },
+    { name: 'animals', start: 30, end: 54 },
+    { name: 'food', start: 54, end: 78 },
+    { name: 'nature', start: 78, end: 99 },
+    { name: 'actions', start: 99, end: 118 },
+    { name: 'fantasy', start: 118, end: 137 },
+    { name: 'india', start: 137, end: 999 },
   ];
   function categoryOf(index) {
     const hit = CATEGORY_BOUNDS.find(c => index >= c.start && index < c.end);
@@ -595,8 +595,67 @@ const BotPeer = (() => {
   let roundTimeoutTimer = null;
   let roundOver = false;
   let drawQueue = [];
+  // True once the human (drawer) has actually put at least one stroke on
+  // the canvas this round. The bot's guess-timer loop checks this before
+  // ever speaking — guessing before a single line exists would feel
+  // unfair/psychic, no matter how "wrong" the early guesses are scripted
+  // to be. Reset every turn in clearTimers().
+  let humanHasStartedDrawing = false;
+  // Count of strokes seen this round, purely to time reaction banter
+  // ("bhai ye kya bana diya 😭" etc.) a little into the drawing rather
+  // than on the very first pen-down, and to avoid firing banter more
+  // than once every few strokes.
+  let strokeCountThisRound = 0;
+  let banterFiredThisRound = 0;
+  const MAX_BANTER_PER_ROUND = 2;
 
   const ROUND_SECONDS = 70; // must match Game's ROUND_SECONDS (js/game.js) so bot-as-drawer timeouts land at the same moment the human's own timer UI hits 0
+
+  // ---- Human-like chat banter ----
+  // Casual Hinglish one-liners + emoji-only reactions the bot fires
+  // occasionally WHILE guessing, interleaved with its real/decoy guesses,
+  // so the chat log reads like a friend messing around rather than a
+  // program printing candidate words. These never affect chooseGuess's
+  // logic — purely cosmetic flavor sent as ordinary 'chat' messages.
+  const BANTER_LINES = [
+    'bhai tera baseka nahi hai ye 😭',
+    'yrr itni kharab drawing 😂',
+    'ye kya bana diya bhai',
+    'bhai thoda aur try kr le',
+    'kuch samajh nahi aa rha 🤔',
+    'are wah, thoda thoda samajh aa rha h',
+    'okay okay ab dikh rha kuch kuch',
+    'bhai ye toh mast bana rha h tu',
+    'waah kya drawing bnai hai bhai 🔥',
+    'lgta h pehli baar draw kr rha h 😅',
+    'ruk zra... sochne de',
+    'hmm interesting shape hai ye',
+    'bhai hint bhi dede yrr 👀',
+    'itna time lg rha, jaldi bana',
+  ];
+  const BANTER_EMOJIS = ['😂', '🤔', '👀', '😭', '🔥', '😅', '🙌', '💀', '🤨'];
+
+  function randomBanterText() {
+    // Occasionally fire an emoji-only reaction instead of a full line,
+    // same as how people actually chat.
+    if (Math.random() < 0.35) {
+      return BANTER_EMOJIS[Math.floor(Math.random() * BANTER_EMOJIS.length)];
+    }
+    return BANTER_LINES[Math.floor(Math.random() * BANTER_LINES.length)];
+  }
+
+  // Called from the guess-tick loop when the bot decides NOT to guess
+  // this tick — a chance to send banter instead, so the chat doesn't go
+  // silent between guesses. Capped per round and gated on the human
+  // having actually started drawing (same fairness rule as real guesses).
+  function maybeSendBanter() {
+    if (!humanHasStartedDrawing) return;
+    if (banterFiredThisRound >= MAX_BANTER_PER_ROUND) return;
+    if (Math.random() < 0.45) {
+      banterFiredThisRound += 1;
+      emit({ type: 'chat', text: randomBanterText(), name: botName, msgId: 'bot' + Date.now() });
+    }
+  }
 
   function emit(data) {
     // Simulate real network latency so bot messages don't feel instant/
@@ -624,6 +683,9 @@ const BotPeer = (() => {
     clearTimeout(roundTimeoutTimer);
     drawQueue = [];
     roundOver = false;
+    humanHasStartedDrawing = false;
+    strokeCountThisRound = 0;
+    banterFiredThisRound = 0;
     // guesserState must NOT survive into a new turn. Without this reset,
     // a round where the bot draws (no guesserState touched at all) left
     // the PREVIOUS round's guesser state (its old pattern, its old
@@ -699,10 +761,12 @@ const BotPeer = (() => {
       }
     });
 
-    // Drip out strokes/fills over roughly 45 seconds so the sketch builds
-    // up progressively instead of appearing all at once.
-    const totalMs = 45000;
-    const perItem = Math.max(60, totalMs / Math.max(1, drawQueue.length));
+    // Drip out strokes/fills over roughly 40 seconds so the sketch builds
+    // up progressively instead of appearing all at once, while still
+    // leaving the player a solid chunk of the 70s round to actually guess
+    // once the drawing is done.
+    const totalMs = 40000;
+    const perItem = Math.max(45, totalMs / Math.max(1, drawQueue.length));
     let i = 0;
     function tick() {
       if (i >= drawQueue.length || roundOver) return;
@@ -736,10 +800,18 @@ const BotPeer = (() => {
       const delay = base + Math.random() * 4000;
       guessTimer = setTimeout(() => {
         if (roundOver) return;
+        // Never guess (not even a scripted decoy) until the human has
+        // actually put pen to canvas this round — an "answer" arriving
+        // before any line exists reads as the bot cheating/psychic, even
+        // when that answer is deliberately wrong. Keep polling quietly
+        // at the same cadence instead of guessing blind.
+        if (!humanHasStartedDrawing) { tick(); return; }
         const guess = BotBrain.chooseGuess(guesserState);
         if (roundOver) return;
         if (guess) {
           emit({ type: 'chat', text: guess, name: botName, msgId: 'bot' + Date.now() });
+        } else {
+          maybeSendBanter();
         }
         tick();
       }, delay);
@@ -819,9 +891,18 @@ const BotPeer = (() => {
             BotBrain.ingestClue(guesserState, data.text);
           }
           break;
-        case 'clear':
         case 'stroke':
         case 'fill':
+          // The human (drawer) actually marked the canvas — from now on
+          // the bot-as-guesser is allowed to speak this round. Harmless
+          // no-op when the bot itself is the drawer (its own strokes
+          // never round-trip back through send()).
+          if (!botIsDrawer) {
+            humanHasStartedDrawing = true;
+            strokeCountThisRound += 1;
+          }
+          break;
+        case 'clear':
         case 'undo':
         case 'seen':
         case 'voiceline':
