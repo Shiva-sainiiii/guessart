@@ -43,7 +43,7 @@
 // down/misconfigured API key never breaks the chat experience, it just
 // quietly degrades to canned lines.
 
-const DEFAULT_MODEL = 'google/gemini-2.0-flash-exp:free'; // fast + free-tier OpenRouter model; override via OPENROUTER_MODEL env var
+const DEFAULT_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'; // fast + free-tier OpenRouter model; override via OPENROUTER_MODEL env var
 const REQUEST_TIMEOUT_MS = 6000; // fail fast — a slow AI reply is worse than a quick canned one for a live chat
 
 const SYSTEM_PROMPT = `You are a playful, slightly cheeky friend playing a Pictionary-style drawing/guessing game called GuessArt with the user. You are texting in casual Hinglish (a natural mix of Hindi and English, written in Latin/English script, the way young Indian friends actually text each other) — not pure Hindi, not formal English.
