@@ -304,7 +304,7 @@
       <img src="public/images/logo.png" alt="GuessArt" class="brand-logo">
       <h1>Guess<span>Art</span></h1>
       <p class="credit-line">by <span>Shiva Saini</span></p>
-      <p class="tagline">draw. guess. roast your friend.</p>
+      <p class="tagline" data-i18n="tagline">draw. guess. roast your friend.</p>
     </div>
 
     <div class="card">
@@ -325,10 +325,10 @@
            top-level choice, and each mode's own controls render below it. -->
       <div class="mode-tabs" role="tablist">
         <button id="tab-mode-friend" class="mode-tab active" role="tab" aria-selected="true">
-          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-users"/></svg> Play with Friend
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-users"/></svg> <span data-i18n="playFriend">Play with Friend</span>
         </button>
         <button id="tab-mode-bot" class="mode-tab" role="tab" aria-selected="false">
-          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> Play with Computer
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> <span data-i18n="playComputer">Play with Computer</span>
         </button>
       </div>
 
@@ -337,28 +337,28 @@
            entirely so there's no ambiguity about which action a tap does. -->
       <div id="panel-mode-friend" class="mode-panel">
         <div class="subtabs" role="tablist">
-          <button id="subtab-create" class="subtab active" role="tab" aria-selected="true">Create Room</button>
-          <button id="subtab-join" class="subtab" role="tab" aria-selected="false">Join Room</button>
+          <button id="subtab-create" class="subtab active" role="tab" aria-selected="true" data-i18n="createRoom">Create Room</button>
+          <button id="subtab-join" class="subtab" role="tab" aria-selected="false" data-i18n="joinRoom">Join Room</button>
         </div>
 
         <div id="subpanel-create" class="subpanel active">
-          <p class="mode-hint">Start a new room and share the code with your friend.</p>
-          <button id="btn-create" class="btn btn-primary" disabled>Create Room</button>
+          <p class="mode-hint" data-i18n="roomHint">Start a new room and share the code with your friend.</p>
+          <button id="btn-create" class="btn btn-primary" disabled data-i18n="createRoom">Create Room</button>
         </div>
 
         <div id="subpanel-join" class="subpanel">
-          <p id="join-hint" class="join-hint hidden"><svg class="icon icon-inline" width="14" height="14"><use href="#icon-pencil"/></svg> You've been invited to a room!</p>
+          <p id="join-hint" class="join-hint hidden"><svg class="icon icon-inline" width="14" height="14"><use href="#icon-pencil"/></svg> <span data-i18n="joinHint">You've been invited to a room!</span></p>
           <input id="input-join-code" type="text" placeholder="ROOM CODE" maxlength="6" autocomplete="off" autocapitalize="characters">
-          <button id="btn-join" class="btn btn-secondary" disabled>Join Room</button>
+          <button id="btn-join" class="btn btn-secondary" disabled data-i18n="joinRoom">Join Room</button>
         </div>
       </div>
 
       <!-- COMPUTER MODE: single tap, no code/waiting screen needed since
            there's no second device to connect to. -->
       <div id="panel-mode-bot" class="mode-panel hidden">
-        <p class="mode-hint">Draw and guess against the GuessArt bot — no friend needed, starts instantly.</p>
+        <p class="mode-hint" data-i18n="botHint">Draw and guess against the GuessArt bot — no friend needed, starts instantly.</p>
         <button id="btn-play-bot" class="btn btn-primary" disabled>
-          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> Play vs Computer
+          <svg class="icon icon-inline" width="16" height="16"><use href="#icon-robot"/></svg> <span data-i18n="playVsBot">Play vs Computer</span>
         </button>
       </div>
     </div>
@@ -375,8 +375,8 @@
       <div class="about-inner">
 
         <header class="about-header">
-          <h2 id="about-heading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
-          <p class="about-lede">
+          <h2 id="about-heading" data-i18n="aboutHeading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
+          <p class="about-lede" data-i18n-html="aboutLede">
             GuessArt is a browser-based multiplayer drawing and guessing game — no download,
             no account, no waiting room full of strangers. Create a private room, drop the
             link in your group chat, and start drawing in seconds. It's the free
@@ -386,40 +386,40 @@
         </header>
 
         <article class="about-block" aria-labelledby="how-to-play-heading">
-          <h3 id="how-to-play-heading">How to Play GuessArt</h3>
+          <h3 id="how-to-play-heading" data-i18n="howToPlayHeading">How to Play GuessArt</h3>
           <ol class="how-to-steps">
-            <li><strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.</li>
-            <li><strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.</li>
-            <li><strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.</li>
-            <li><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
-            <li><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
+            <li data-i18n-html="step1"><strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.</li>
+            <li data-i18n-html="step2"><strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.</li>
+            <li data-i18n-html="step3"><strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.</li>
+            <li data-i18n-html="step4"><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
+            <li data-i18n-html="step5"><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
           </ol>
         </article>
 
         <article class="about-block" aria-labelledby="features-heading">
-          <h3 id="features-heading">Why Players Choose GuessArt</h3>
+          <h3 id="features-heading" data-i18n="featuresHeading">Why Players Choose GuessArt</h3>
           <div class="feature-grid">
             <div class="feature-card">
-              <h4>🔒 Private Rooms</h4>
-              <p>Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.</p>
+              <h4 data-i18n="feature1Title">🔒 Private Rooms</h4>
+              <p data-i18n="feature1Body">Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.</p>
             </div>
             <div class="feature-card">
-              <h4>🎙️ Live Voice Chat</h4>
-              <p>Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.</p>
+              <h4 data-i18n="feature2Title">🎙️ Live Voice Chat</h4>
+              <p data-i18n="feature2Body">Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.</p>
             </div>
             <div class="feature-card">
-              <h4>📢 Meme Soundboards</h4>
-              <p>Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.</p>
+              <h4 data-i18n="feature3Title">📢 Meme Soundboards</h4>
+              <p data-i18n="feature3Body">Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.</p>
             </div>
             <div class="feature-card">
-              <h4>⚡ Instant &amp; Free</h4>
-              <p>No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.</p>
+              <h4 data-i18n="feature4Title">⚡ Instant &amp; Free</h4>
+              <p data-i18n="feature4Body">No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.</p>
             </div>
           </div>
         </article>
 
         <footer class="about-footer">
-          <p>
+          <p data-i18n="aboutFooter">
             Looking for something to replace skribbl.io or gartic.io for game night?
             GuessArt keeps it simple: create a room, invite friends, and start drawing —
             free, private, and built for small friend groups.
@@ -433,28 +433,28 @@
          Service | Privacy Policy" row, each opening its own bottom sheet
          instead of navigating to a separate page. -->
     <div class="legal-links">
-      <button id="btn-open-rules" class="legal-link">Game Rules</button>
+      <button id="btn-open-rules" class="legal-link" data-i18n="gameRules">Game Rules</button>
       <span class="legal-sep">|</span>
-      <button id="btn-open-terms" class="legal-link">Terms of Service</button>
+      <button id="btn-open-terms" class="legal-link" data-i18n="termsOfService">Terms of Service</button>
       <span class="legal-sep">|</span>
-      <button id="btn-open-privacy" class="legal-link">Privacy Policy</button>
+      <button id="btn-open-privacy" class="legal-link" data-i18n="privacyPolicy">Privacy Policy</button>
     </div>
   </div>
 
   <!-- SCREEN 2: WAITING ROOM -->
   <div id="screen-waiting" class="screen">
     <div class="card">
-      <p class="label">Share this code with your friend</p>
+      <p class="label" data-i18n="shareCodeLabel">Share this code with your friend</p>
       <div class="room-code" id="room-code-display">------</div>
       <div class="share-row">
-        <button id="btn-copy-code" class="btn btn-secondary btn-sm">Copy Code</button>
-        <button id="btn-share-link" class="btn btn-primary btn-sm">Share Link</button>
+        <button id="btn-copy-code" class="btn btn-secondary btn-sm" data-i18n="copyCode">Copy Code</button>
+        <button id="btn-share-link" class="btn btn-primary btn-sm" data-i18n="shareLink">Share Link</button>
       </div>
       <div class="waiting-indicator">
         <div class="dot"></div><div class="dot"></div><div class="dot"></div>
       </div>
-      <p class="waiting-text" id="waiting-text">Waiting for friend to join...</p>
-      <button id="btn-cancel-waiting" class="btn btn-ghost">Cancel</button>
+      <p class="waiting-text" id="waiting-text" data-i18n="waitingForFriend">Waiting for friend to join...</p>
+      <button id="btn-cancel-waiting" class="btn btn-ghost" data-i18n="cancel">Cancel</button>
     </div>
   </div>
 
@@ -556,7 +556,7 @@
         <div class="chat-log" id="chat-log"></div>
         <div class="chat-input-row">
           <button id="btn-emoji-toggle" class="btn-icon"><svg class="icon" width="17" height="17"><use href="#icon-smile"/></svg></button>
-          <input id="chat-input" type="text" placeholder="Type a guess or chat..." maxlength="60" autocomplete="off">
+          <input id="chat-input" type="text" placeholder="Type a guess or chat..." maxlength="60" autocomplete="off" data-i18n-placeholder="chatPlaceholder">
           <button id="btn-send-chat" class="btn-icon btn-send"><svg class="icon" width="16" height="16"><use href="#icon-send"/></svg></button>
         </div>
         <div id="emoji-picker" class="emoji-picker hidden"></div>
@@ -580,67 +580,67 @@
     <div id="settings-backdrop" class="settings-backdrop hidden"></div>
     <div id="settings-panel" class="settings-panel hidden">
       <div class="settings-header">
-        <h3>Settings</h3>
+        <h3 data-i18n="settings">Settings</h3>
         <button id="btn-settings-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
       </div>
 
       <div class="settings-section" id="settings-voice-section">
-        <p class="settings-label">Voice</p>
+        <p class="settings-label" data-i18n="voice">Voice</p>
         <div class="settings-row">
-          <span>Microphone</span>
+          <span data-i18n="microphone">Microphone</span>
           <button id="settings-mic-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
         </div>
         <div class="settings-row">
-          <span>Speaker (hear friend)</span>
+          <span data-i18n="speakerHearFriend">Speaker (hear friend)</span>
           <button id="settings-speaker-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
         </div>
         <p id="settings-voice-hint" class="settings-hint"></p>
       </div>
 
       <div class="settings-section">
-        <p class="settings-label">Sound</p>
+        <p class="settings-label" data-i18n="sound">Sound</p>
         <div class="settings-row">
-          <span>Sound effects</span>
+          <span data-i18n="soundEffects">Sound effects</span>
           <button id="settings-sfx-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
         </div>
         <div class="settings-row">
-          <span>Meme voicelines</span>
+          <span data-i18n="memeVoicelines">Meme voicelines</span>
           <button id="settings-voicelines-toggle" class="toggle-switch on"><span class="toggle-knob"></span></button>
         </div>
       </div>
 
       <div class="settings-section">
-        <p class="settings-label">Player</p>
+        <p class="settings-label" data-i18n="player">Player</p>
         <div class="settings-row settings-row-input">
-          <span>Your name</span>
+          <span data-i18n="yourName">Your name</span>
           <input id="settings-name-input" type="text" maxlength="14">
         </div>
       </div>
 
-      <button id="btn-leave-game" class="btn btn-ghost settings-leave-btn">Leave Game</button>
+      <button id="btn-leave-game" class="btn btn-ghost settings-leave-btn" data-i18n="leaveGame">Leave Game</button>
     </div>
   </div>
 
   <!-- SCREEN 4: ROUND RESULT (brief overlay between turns) -->
   <div id="screen-round-result" class="screen">
     <div class="card">
-      <h2 id="result-title">Round Over!</h2>
+      <h2 id="result-title" data-i18n="roundOver">Round Over!</h2>
       <p id="result-word" class="result-word"></p>
       <div class="scores-final">
-        <div><span id="rr-my-score">0</span><small id="rr-my-label">You</small></div>
-        <div><span id="rr-friend-score">0</span><small id="rr-friend-label">Friend</small></div>
+        <div><span id="rr-my-score">0</span><small id="rr-my-label" data-i18n="you">You</small></div>
+        <div><span id="rr-friend-score">0</span><small id="rr-friend-label" data-i18n="friend">Friend</small></div>
       </div>
-      <p class="waiting-text" id="next-round-text">Next round starting...</p>
+      <p class="waiting-text" id="next-round-text" data-i18n="nextRoundStarting">Next round starting...</p>
     </div>
   </div>
 
   <!-- SCREEN 5: GAME OVER -->
   <div id="screen-game-over" class="screen">
     <div class="card">
-      <h2 id="game-over-title">Game Over!</h2>
+      <h2 id="game-over-title" data-i18n="gameOver">Game Over!</h2>
       <div class="scores-final">
-        <div><span id="final-my-score">0</span><small id="final-my-label">You</small></div>
-        <div><span id="final-friend-score">0</span><small id="final-friend-label">Friend</small></div>
+        <div><span id="final-my-score">0</span><small id="final-my-label" data-i18n="you">You</small></div>
+        <div><span id="final-friend-score">0</span><small id="final-friend-label" data-i18n="friend">Friend</small></div>
       </div>
       <!-- Play Again keeps the same connection alive (real friend: same
            room/peer link; bot: same in-memory bot) and restarts the game
@@ -648,9 +648,9 @@
            tearing everything down and reloading the page back to Home —
            that killed the room/contact every single time a game finished. -->
       <button id="btn-play-again" class="btn btn-primary">
-        <svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> Play Again
+        <svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> <span data-i18n="playAgain">Play Again</span>
       </button>
-      <button id="btn-back-home" class="btn btn-ghost">Back to Home</button>
+      <button id="btn-back-home" class="btn btn-ghost" data-i18n="backToHome">Back to Home</button>
     </div>
   </div>
 
@@ -662,28 +662,28 @@
   <div id="menu-backdrop" class="settings-backdrop hidden"></div>
   <div id="menu-root-panel" class="settings-panel hidden">
     <div class="settings-header">
-      <h3><svg class="icon icon-inline" width="15" height="15"><use href="#icon-menu"/></svg> Menu</h3>
+      <h3><svg class="icon icon-inline" width="15" height="15"><use href="#icon-menu"/></svg> <span data-i18n="menu">Menu</span></h3>
       <button id="btn-menu-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="menu-list">
       <button class="menu-list-item" data-open-sub="menu-about-panel">
-        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-info"/></svg> About Developer</span>
+        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-info"/></svg> <span data-i18n="aboutDeveloper">About Developer</span></span>
         <svg class="icon" width="16" height="16"><use href="#icon-chevron-right"/></svg>
       </button>
       <a class="menu-list-item" href="https://github.com/shiva-sainiiii/guessart" target="_blank" rel="noopener">
-        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-code"/></svg> Source Code</span>
+        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-code"/></svg> <span data-i18n="sourceCode">Source Code</span></span>
         <svg class="icon" width="16" height="16"><use href="#icon-chevron-right"/></svg>
       </a>
       <button class="menu-list-item" data-open-sub="menu-settings-panel">
-        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-sliders"/></svg> Settings</span>
+        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-sliders"/></svg> <span data-i18n="settings">Settings</span></span>
         <svg class="icon" width="16" height="16"><use href="#icon-chevron-right"/></svg>
       </button>
       <button class="menu-list-item" data-open-sub="menu-donate-panel">
-        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-gift"/></svg> Gift &amp; Donate</span>
+        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-gift"/></svg> <span data-i18n="giftDonate">Gift &amp; Donate</span></span>
         <svg class="icon" width="16" height="16"><use href="#icon-chevron-right"/></svg>
       </button>
       <button class="menu-list-item" data-open-sub="menu-social-panel">
-        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-instagram"/></svg> Follow / Connect</span>
+        <span class="menu-list-item-left"><svg class="icon icon-inline" width="17" height="17"><use href="#icon-instagram"/></svg> <span data-i18n="followConnect">Follow / Connect</span></span>
         <svg class="icon" width="16" height="16"><use href="#icon-chevron-right"/></svg>
       </button>
     </div>
@@ -693,13 +693,13 @@
   <div id="menu-about-panel" class="settings-panel hidden sub-panel">
     <div class="settings-header">
       <button class="btn-icon menu-back-btn" data-back-to="menu-root-panel"><svg class="icon" width="16" height="16"><use href="#icon-chevron-left"/></svg></button>
-      <h3>About Developer</h3>
+      <h3 data-i18n="aboutDeveloper">About Developer</h3>
       <button class="btn-icon menu-sub-close"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="legal-body about-dev-body">
-      <p><strong>Shiva Saini</strong> is a frontend developer who builds GuessArt and a handful of other browser-based games and tools, all free and vanilla-JS, no frameworks.</p>
-      <p>GuessArt started as a Skribbl-style side project and grew into a full peer-to-peer drawing &amp; guessing game with voice chat, a bot opponent, and no backend required to play with a friend.</p>
-      <p>If you enjoy the game, the Source Code and Gift &amp; Donate links in this menu are the best ways to support more of it.</p>
+      <p data-i18n-html="aboutDevP1"><strong>Shiva Saini</strong> is a frontend developer who builds GuessArt and a handful of other browser-based games and tools, all free and vanilla-JS, no frameworks.</p>
+      <p data-i18n="aboutDevP2">GuessArt started as a Skribbl-style side project and grew into a full peer-to-peer drawing &amp; guessing game with voice chat, a bot opponent, and no backend required to play with a friend.</p>
+      <p data-i18n="aboutDevP3">If you enjoy the game, the Source Code and Gift &amp; Donate links in this menu are the best ways to support more of it.</p>
     </div>
   </div>
 
@@ -707,25 +707,25 @@
   <div id="menu-settings-panel" class="settings-panel hidden sub-panel">
     <div class="settings-header">
       <button class="btn-icon menu-back-btn" data-back-to="menu-root-panel"><svg class="icon" width="16" height="16"><use href="#icon-chevron-left"/></svg></button>
-      <h3>Settings</h3>
+      <h3 data-i18n="settings">Settings</h3>
       <button class="btn-icon menu-sub-close"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="settings-section" style="border-top:none; padding-top:4px;">
       <div class="settings-row">
-        <span class="settings-row-label"><svg class="icon icon-inline" width="15" height="15"><use href="#icon-sun"/></svg> Theme</span>
+        <span class="settings-row-label"><svg class="icon icon-inline" width="15" height="15"><use href="#icon-sun"/></svg> <span data-i18n="theme">Theme</span></span>
         <div class="segmented-toggle" id="theme-toggle" role="tablist">
-          <button class="segmented-option" data-theme-value="light" role="tab">Light</button>
-          <button class="segmented-option active" data-theme-value="dark" role="tab">Dark</button>
+          <button class="segmented-option" data-theme-value="light" role="tab" data-i18n="light">Light</button>
+          <button class="segmented-option active" data-theme-value="dark" role="tab" data-i18n="dark">Dark</button>
         </div>
       </div>
       <div class="settings-row">
-        <span class="settings-row-label"><svg class="icon icon-inline" width="15" height="15"><use href="#icon-globe"/></svg> Language</span>
+        <span class="settings-row-label"><svg class="icon icon-inline" width="15" height="15"><use href="#icon-globe"/></svg> <span data-i18n="language">Language</span></span>
         <div class="segmented-toggle" id="lang-toggle" role="tablist">
           <button class="segmented-option active" data-lang-value="en" role="tab">English</button>
           <button class="segmented-option" data-lang-value="hi" role="tab">Hinglish</button>
         </div>
       </div>
-      <p class="settings-hint" style="margin-top:10px;">Language currently switches menu &amp; home screen text — in-game text is coming soon.</p>
+      <p class="settings-hint" style="margin-top:10px;" data-i18n="langHint">Language switches menu, home screen, waiting room, in-game labels &amp; legal pages.</p>
     </div>
   </div>
 
@@ -733,11 +733,11 @@
   <div id="menu-donate-panel" class="settings-panel hidden sub-panel">
     <div class="settings-header">
       <button class="btn-icon menu-back-btn" data-back-to="menu-root-panel"><svg class="icon" width="16" height="16"><use href="#icon-chevron-left"/></svg></button>
-      <h3>Gift &amp; Donate</h3>
+      <h3 data-i18n="giftDonate">Gift &amp; Donate</h3>
       <button class="btn-icon menu-sub-close"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="legal-body donate-body">
-      <p>GuessArt is free and always will be. If it made your group chat's night, a small tip helps keep it running and improving.</p>
+      <p data-i18n="donateBody">GuessArt is free and always will be. If it made your group chat's night, a small tip helps keep it running and improving.</p>
       <div class="donate-qr-wrap">
         <img src="public/images/donate-qr.jpg" alt="UPI QR code to donate" class="donate-qr-img">
       </div>
@@ -745,7 +745,7 @@
         <span class="donate-upi-id" id="donate-upi-id">8813008167@ptyes</span>
         <button id="btn-copy-upi" class="btn-icon" title="Copy UPI ID"><svg class="icon" width="15" height="15"><use href="#icon-copy"/></svg></button>
       </div>
-      <p id="donate-copy-hint" class="settings-hint hidden">Copied!</p>
+      <p id="donate-copy-hint" class="settings-hint hidden" data-i18n="copied">Copied!</p>
     </div>
   </div>
 
@@ -753,7 +753,7 @@
   <div id="menu-social-panel" class="settings-panel hidden sub-panel">
     <div class="settings-header">
       <button class="btn-icon menu-back-btn" data-back-to="menu-root-panel"><svg class="icon" width="16" height="16"><use href="#icon-chevron-left"/></svg></button>
-      <h3>Follow / Connect</h3>
+      <h3 data-i18n="followConnect">Follow / Connect</h3>
       <button class="btn-icon menu-sub-close"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="settings-section" style="border-top:none; padding-top:4px;">
@@ -779,33 +779,33 @@
   <div id="contact-backdrop" class="settings-backdrop hidden"></div>
   <div id="contact-panel" class="settings-panel hidden">
     <div class="settings-header">
-      <h3><svg class="icon icon-inline" width="15" height="15"><use href="#icon-mail"/></svg> Contact Us</h3>
+      <h3><svg class="icon icon-inline" width="15" height="15"><use href="#icon-mail"/></svg> <span data-i18n="contactUs">Contact Us</span></h3>
       <button id="btn-contact-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
 
     <div class="settings-section" style="border-top:none; padding-top:4px;">
-      <label class="contact-field-label" for="contact-subject-btn">Subject</label>
+      <label class="contact-field-label" for="contact-subject-btn" data-i18n="subject">Subject</label>
       <button id="contact-subject-btn" class="contact-select-btn" type="button" aria-haspopup="listbox">
-        <span id="contact-subject-label">Select a subject…</span>
+        <span id="contact-subject-label" data-i18n="selectSubject">Select a subject…</span>
         <svg class="icon" width="14" height="14"><use href="#icon-chevron-down"/></svg>
       </button>
       <div id="contact-subject-menu" class="contact-select-menu hidden" role="listbox">
-        <button class="contact-select-option" data-value="Bug Report" role="option">Bug Report</button>
-        <button class="contact-select-option" data-value="Feature Request" role="option">Feature Request</button>
-        <button class="contact-select-option" data-value="Feedback" role="option">Feedback</button>
-        <button class="contact-select-option" data-value="Other" role="option">Other</button>
+        <button class="contact-select-option" data-value="Bug Report" role="option" data-i18n="bugReport">Bug Report</button>
+        <button class="contact-select-option" data-value="Feature Request" role="option" data-i18n="featureRequest">Feature Request</button>
+        <button class="contact-select-option" data-value="Feedback" role="option" data-i18n="feedback">Feedback</button>
+        <button class="contact-select-option" data-value="Other" role="option" data-i18n="other">Other</button>
       </div>
       <input type="hidden" id="contact-subject" value="">
 
-      <label class="contact-field-label" for="contact-email">Email <span class="contact-optional">(optional)</span></label>
-      <input id="contact-email" class="contact-input" type="email" placeholder="Your email address (optional)" autocomplete="off">
+      <label class="contact-field-label" for="contact-email" data-i18n-html="emailOptional">Email <span class="contact-optional">(optional)</span></label>
+      <input id="contact-email" class="contact-input" type="email" placeholder="Your email address (optional)" autocomplete="off" data-i18n-placeholder="emailPlaceholder">
 
-      <label class="contact-field-label" for="contact-message">Message</label>
-      <textarea id="contact-message" class="contact-textarea" rows="4" placeholder="Enter your message"></textarea>
+      <label class="contact-field-label" for="contact-message" data-i18n="message">Message</label>
+      <textarea id="contact-message" class="contact-textarea" rows="4" placeholder="Enter your message" data-i18n-placeholder="messagePlaceholder"></textarea>
 
-      <p id="contact-error" class="settings-hint hidden">Please select a subject and write a message.</p>
+      <p id="contact-error" class="settings-hint hidden" data-i18n="contactError">Please select a subject and write a message.</p>
 
-      <button id="btn-contact-send" class="btn btn-primary" style="margin-top:14px;">Send Message</button>
+      <button id="btn-contact-send" class="btn btn-primary" style="margin-top:14px;" data-i18n="sendMessage">Send Message</button>
     </div>
   </div>
 
@@ -814,45 +814,45 @@
   <div id="rules-backdrop" class="settings-backdrop hidden"></div>
   <div id="rules-panel" class="settings-panel hidden legal-panel">
     <div class="settings-header">
-      <h3>Game Rules</h3>
+      <h3 data-i18n="gameRules">Game Rules</h3>
       <button id="btn-rules-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="legal-body">
-      <p>One player draws a secret word on the canvas while everyone else races to type the correct guess in chat.</p>
-      <p>Guessing faster earns more points — the timer counts down each turn, so quicker correct guesses score higher than late ones.</p>
-      <p>Turns rotate automatically between players. Over multiple rounds, the player with the highest total score at the end wins.</p>
-      <p>The drawer can't type guesses during their own turn, and typing the secret word in chat while someone else is drawing doesn't count — that's on the honor system between friends.</p>
-      <p>Playing vs Computer follows the same scoring, just against the built-in bot instead of a second player.</p>
+      <p data-i18n="rule1">One player draws a secret word on the canvas while everyone else races to type the correct guess in chat.</p>
+      <p data-i18n="rule2">Guessing faster earns more points — the timer counts down each turn, so quicker correct guesses score higher than late ones.</p>
+      <p data-i18n="rule3">Turns rotate automatically between players. Over multiple rounds, the player with the highest total score at the end wins.</p>
+      <p data-i18n="rule4">The drawer can't type guesses during their own turn, and typing the secret word in chat while someone else is drawing doesn't count — that's on the honor system between friends.</p>
+      <p data-i18n="rule5">Playing vs Computer follows the same scoring, just against the built-in bot instead of a second player.</p>
     </div>
   </div>
 
   <div id="terms-backdrop" class="settings-backdrop hidden"></div>
   <div id="terms-panel" class="settings-panel hidden legal-panel">
     <div class="settings-header">
-      <h3>Terms of Service</h3>
+      <h3 data-i18n="termsOfService">Terms of Service</h3>
       <button id="btn-terms-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="legal-body">
-      <p>GuessArt is a free, browser-based game provided as-is, with no guarantee of uptime, accuracy, or fitness for any particular purpose.</p>
-      <p>No account or sign-up is required. Rooms are created on the fly and exist only for the duration of a session — nothing about a game is stored permanently on any server.</p>
-      <p>Don't use GuessArt to draw, type, or share anything illegal, hateful, or intended to harass another player. Rooms are private and meant for people you've personally invited.</p>
-      <p>The game, its name, and its logo belong to Shiva Saini. You're welcome to play and share links to it; please don't redistribute the code as your own without permission.</p>
-      <p>These terms may be updated as the game changes. Continued use after an update means you accept the current version.</p>
+      <p data-i18n="terms1">GuessArt is a free, browser-based game provided as-is, with no guarantee of uptime, accuracy, or fitness for any particular purpose.</p>
+      <p data-i18n="terms2">No account or sign-up is required. Rooms are created on the fly and exist only for the duration of a session — nothing about a game is stored permanently on any server.</p>
+      <p data-i18n="terms3">Don't use GuessArt to draw, type, or share anything illegal, hateful, or intended to harass another player. Rooms are private and meant for people you've personally invited.</p>
+      <p data-i18n="terms4">The game, its name, and its logo belong to Shiva Saini. You're welcome to play and share links to it; please don't redistribute the code as your own without permission.</p>
+      <p data-i18n="terms5">These terms may be updated as the game changes. Continued use after an update means you accept the current version.</p>
     </div>
   </div>
 
   <div id="privacy-backdrop" class="settings-backdrop hidden"></div>
   <div id="privacy-panel" class="settings-panel hidden legal-panel">
     <div class="settings-header">
-      <h3>Privacy Policy</h3>
+      <h3 data-i18n="privacyPolicy">Privacy Policy</h3>
       <button id="btn-privacy-close" class="btn-icon"><svg class="icon" width="15" height="15"><use href="#icon-close"/></svg></button>
     </div>
     <div class="legal-body">
-      <p>GuessArt doesn't require an account, so it doesn't collect your name, email, or any personal identity — the nickname you type is local to your device and shared only with the friend in your room.</p>
-      <p>Gameplay (drawing strokes, chat, voice) travels directly between you and your friend's device using a peer-to-peer connection — there's no central server storing or recording your games.</p>
-      <p>Voice chat requires microphone permission from your browser. It's used only for the live call with your friend and is never recorded or uploaded anywhere.</p>
-      <p>If you use the Contact Us form, the message and optional email you provide are sent directly to the developer's inbox via your own mail app — nothing is stored in a database.</p>
-      <p>This site may load third-party resources (such as the PeerJS connection library) needed for the game to function, which are subject to their own providers' policies.</p>
+      <p data-i18n="privacy1">GuessArt doesn't require an account, so it doesn't collect your name, email, or any personal identity — the nickname you type is local to your device and shared only with the friend in your room.</p>
+      <p data-i18n="privacy2">Gameplay (drawing strokes, chat, voice) travels directly between you and your friend's device using a peer-to-peer connection — there's no central server storing or recording your games.</p>
+      <p data-i18n="privacy3">Voice chat requires microphone permission from your browser. It's used only for the live call with your friend and is never recorded or uploaded anywhere.</p>
+      <p data-i18n="privacy4">If you use the Contact Us form, the message and optional email you provide are sent directly to the developer's inbox via your own mail app — nothing is stored in a database.</p>
+      <p data-i18n="privacy5">This site may load third-party resources (such as the PeerJS connection library) needed for the game to function, which are subject to their own providers' policies.</p>
     </div>
   </div>
 

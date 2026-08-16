@@ -229,73 +229,310 @@ const ThemeManager = (function setupTheme() {
 })();
 
 // ---------- LANGUAGE (English/Hinglish, persisted) ----------
-// Scope: switches the static home-screen + menu copy visible right now
-// (the strings in LANG_STRINGS below). Live in-round game text (chat
-// prompts, hints, etc.) isn't covered yet — the Settings hint under the
-// toggle says so, so this doesn't overclaim what it does.
+// Generic engine: any element in the HTML tagged with data-i18n="key",
+// data-i18n-html="key" (for strings containing markup like <strong>),
+// or data-i18n-placeholder="key" (for input/textarea placeholders) gets
+// its content swapped automatically — adding a new translated string
+// anywhere in the app is just adding the attribute + a dictionary
+// entry, not another manual querySelector line here.
+//
+// Scope: home screen, waiting room, in-game static labels (Settings
+// panel, round result, game over), the hamburger menu, Contact Us, and
+// all three legal panels (Rules/Terms/Privacy). NOT covered: text that
+// only ever exists as dynamically-generated JS strings at runtime —
+// chat system messages, hint reveals, the word banner, bot dialogue —
+// since translating those lives in the game logic files, not here.
 const LangManager = (function setupLang() {
   const STORAGE_KEY = 'guessart_lang';
 
   const LANG_STRINGS = {
     en: {
+      // Home screen
       tagline: 'draw. guess. roast your friend.',
       playFriend: 'Play with Friend',
       playComputer: 'Play with Computer',
       createRoom: 'Create Room',
       joinRoom: 'Join Room',
       roomHint: 'Start a new room and share the code with your friend.',
+      joinHint: "You've been invited to a room!",
+      botHint: 'Draw and guess against the GuessArt bot — no friend needed, starts instantly.',
+      playVsBot: 'Play vs Computer',
+      gameRules: 'Game Rules',
+      termsOfService: 'Terms of Service',
+      privacyPolicy: 'Privacy Policy',
+
+      // About / SEO section
+      aboutHeading: 'The Free Online Drawing & Guessing Game You Play With Friends',
+      aboutLede: `GuessArt is a browser-based multiplayer drawing and guessing game — no download,
+            no account, no waiting room full of strangers. Create a private room, drop the
+            link in your group chat, and start drawing in seconds. It's the free
+            <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
+            built for playing with the people you actually know.`,
+      howToPlayHeading: 'How to Play GuessArt',
+      step1: '<strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.',
+      step2: '<strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.',
+      step3: '<strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.',
+      step4: '<strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.',
+      step5: "<strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.",
+      featuresHeading: 'Why Players Choose GuessArt',
+      feature1Title: '🔒 Private Rooms',
+      feature1Body: 'Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.',
+      feature2Title: '🎙️ Live Voice Chat',
+      feature2Body: 'Built-in voice chat lets you hear every reaction in real time, so guessing wrong is half the fun.',
+      feature3Title: '📢 Meme Soundboards',
+      feature3Body: 'Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.',
+      feature4Title: '⚡ Instant & Free',
+      feature4Body: 'No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.',
+      aboutFooter: "Looking for something to replace skribbl.io or gartic.io for game night? GuessArt keeps it simple: create a room, invite friends, and start drawing — free, private, and built for small friend groups.",
+
+      // Waiting room
+      shareCodeLabel: 'Share this code with your friend',
+      copyCode: 'Copy Code',
+      shareLink: 'Share Link',
+      waitingForFriend: 'Waiting for friend to join...',
+      cancel: 'Cancel',
+
+      // In-game Settings panel
+      settings: 'Settings',
+      voice: 'Voice',
+      microphone: 'Microphone',
+      speakerHearFriend: 'Speaker (hear friend)',
+      sound: 'Sound',
+      soundEffects: 'Sound effects',
+      memeVoicelines: 'Meme voicelines',
+      player: 'Player',
+      yourName: 'Your name',
+      leaveGame: 'Leave Game',
+      chatPlaceholder: 'Type a guess or chat...',
+
+      // Round result / Game over
+      roundOver: 'Round Over!',
+      you: 'You',
+      friend: 'Friend',
+      nextRoundStarting: 'Next round starting...',
+      gameOver: 'Game Over!',
+      playAgain: 'Play Again',
+      backToHome: 'Back to Home',
+
+      // Hamburger menu
+      menu: 'Menu',
+      aboutDeveloper: 'About Developer',
+      sourceCode: 'Source Code',
+      giftDonate: 'Gift & Donate',
+      followConnect: 'Follow / Connect',
+      aboutDevP1: '<strong>Shiva Saini</strong> is a frontend developer who builds GuessArt and a handful of other browser-based games and tools, all free and vanilla-JS, no frameworks.',
+      aboutDevP2: 'GuessArt started as a Skribbl-style side project and grew into a full peer-to-peer drawing & guessing game with voice chat, a bot opponent, and no backend required to play with a friend.',
+      aboutDevP3: 'If you enjoy the game, the Source Code and Gift & Donate links in this menu are the best ways to support more of it.',
+      theme: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      language: 'Language',
+      langHint: 'Language switches menu, home screen, waiting room, in-game labels & legal pages.',
+      donateBody: "GuessArt is free and always will be. If it made your group chat's night, a small tip helps keep it running and improving.",
+      copied: 'Copied!',
+
+      // Contact Us
+      contactUs: 'Contact Us',
+      subject: 'Subject',
+      selectSubject: 'Select a subject…',
+      bugReport: 'Bug Report',
+      featureRequest: 'Feature Request',
+      feedback: 'Feedback',
+      other: 'Other',
+      emailOptional: 'Email <span class="contact-optional">(optional)</span>',
+      emailPlaceholder: 'Your email address (optional)',
+      message: 'Message',
+      messagePlaceholder: 'Enter your message',
+      contactError: 'Please select a subject and write a message.',
+      sendMessage: 'Send Message',
+
+      // Game Rules
+      rule1: 'One player draws a secret word on the canvas while everyone else races to type the correct guess in chat.',
+      rule2: 'Guessing faster earns more points — the timer counts down each turn, so quicker correct guesses score higher than late ones.',
+      rule3: 'Turns rotate automatically between players. Over multiple rounds, the player with the highest total score at the end wins.',
+      rule4: "The drawer can't type guesses during their own turn, and typing the secret word in chat while someone else is drawing doesn't count — that's on the honor system between friends.",
+      rule5: 'Playing vs Computer follows the same scoring, just against the built-in bot instead of a second player.',
+
+      // Terms of Service
+      terms1: 'GuessArt is a free, browser-based game provided as-is, with no guarantee of uptime, accuracy, or fitness for any particular purpose.',
+      terms2: 'No account or sign-up is required. Rooms are created on the fly and exist only for the duration of a session — nothing about a game is stored permanently on any server.',
+      terms3: "Don't use GuessArt to draw, type, or share anything illegal, hateful, or intended to harass another player. Rooms are private and meant for people you've personally invited.",
+      terms4: "The game, its name, and its logo belong to Shiva Saini. You're welcome to play and share links to it; please don't redistribute the code as your own without permission.",
+      terms5: 'These terms may be updated as the game changes. Continued use after an update means you accept the current version.',
+
+      // Privacy Policy
+      privacy1: "GuessArt doesn't require an account, so it doesn't collect your name, email, or any personal identity — the nickname you type is local to your device and shared only with the friend in your room.",
+      privacy2: "Gameplay (drawing strokes, chat, voice) travels directly between you and your friend's device using a peer-to-peer connection — there's no central server storing or recording your games.",
+      privacy3: "Voice chat requires microphone permission from your browser. It's used only for the live call with your friend and is never recorded or uploaded anywhere.",
+      privacy4: "If you use the Contact Us form, the message and optional email you provide are sent directly to the developer's inbox via your own mail app — nothing is stored in a database.",
+      privacy5: "This site may load third-party resources (such as the PeerJS connection library) needed for the game to function, which are subject to their own providers' policies.",
     },
     hi: {
+      // Home screen
       tagline: 'banao. pehchano. dost ko roast karo.',
       playFriend: 'Dost ke saath khelo',
       playComputer: 'Computer ke saath khelo',
       createRoom: 'Room banao',
       joinRoom: 'Room join karo',
       roomHint: 'Naya room banao aur code apne dost ko bhejo.',
+      joinHint: 'Tumhe ek room me invite kiya gaya hai!',
+      botHint: 'GuessArt ke bot ke against banao aur guess karo — kisi dost ki zaroorat nahi, turant shuru ho jaata hai.',
+      playVsBot: 'Computer ke against khelo',
+      gameRules: 'Game ke Niyam',
+      termsOfService: 'Seva Shartein',
+      privacyPolicy: 'Privacy Policy',
+
+      // About / SEO section
+      aboutHeading: 'Free Online Drawing & Guessing Game Jo Tum Dosto Ke Saath Khelte Ho',
+      aboutLede: `GuessArt ek browser-based multiplayer drawing aur guessing game hai — koi download nahi,
+            koi account nahi, ajnabiyon se bhara waiting room bhi nahi. Ek private room banao, group
+            chat me link daalo, aur seconds me banana shuru karo. Ye free
+            <strong>skribbl.io ka alternative</strong> aur <strong>gartic.io ka alternative</strong> hai,
+            un logon ke saath khelne ke liye jinhe tum sach me jaante ho.`,
+      howToPlayHeading: 'GuessArt Kaise Khelein',
+      step1: '<strong>Room Banao.</strong> Naam chuno, "Create Room" dabao, aur turant 6-character room code paao.',
+      step2: '<strong>Apne Dosto Ko Bulao.</strong> Room code ya link share karo — wo ek tap me join ho jaate hain, sign-up ki zaroorat nahi.',
+      step3: '<strong>Baari-Baari Banao.</strong> Ek player canvas par secret word banata hai, baaki sab guess karne ki race karte hain.',
+      step4: '<strong>Guess Karo &amp; Points Kamao.</strong> Chat me apne guess type karo — jitni jaldi guess karoge, utne zyada points milenge.',
+      step5: '<strong>Live Trash Talk Karo.</strong> Voice chat on karo aur jab kisi ki drawing bekar ho jaaye toh meme soundboard voiceline chalao.',
+      featuresHeading: 'Players GuessArt Kyun Choose Karte Hain',
+      feature1Title: '🔒 Private Rooms',
+      feature1Body: 'Har game ek private, code-protected room me chalta hai — sirf apne dosto ke saath asli draw and guess game khelo, ajnabiyon ke saath nahi.',
+      feature2Title: '🎙️ Live Voice Chat',
+      feature2Body: 'Built-in voice chat se har reaction real time me suno, isiliye galat guess karna bhi mazedaar hota hai.',
+      feature3Title: '📢 Meme Soundboards',
+      feature3Body: 'Round ke beech me meme voicelines aur sound effects chalao, bekar drawings ko roast karo aur achhe guess celebrate karo.',
+      feature4Title: '⚡ Turant & Free',
+      feature4Body: 'Koi install nahi, koi account nahi, koi paywall nahi. Link kholo aur apne browser me hi dosto ke saath free drawing puzzle khelo.',
+      aboutFooter: 'Game night ke liye skribbl.io ya gartic.io ka replacement dhoondh rahe ho? GuessArt ise simple rakhta hai: room banao, dosto ko bulao, aur banana shuru karo — free, private, aur chhote dosto ke groups ke liye बनाया gaya.',
+
+      // Waiting room
+      shareCodeLabel: 'Ye code apne dost ke saath share karo',
+      copyCode: 'Code Copy Karo',
+      shareLink: 'Link Share Karo',
+      waitingForFriend: 'Dost ke join hone ka इंतज़ार hai...',
+      cancel: 'Cancel',
+
+      // In-game Settings panel
+      settings: 'Settings',
+      voice: 'Voice',
+      microphone: 'Microphone',
+      speakerHearFriend: 'Speaker (dost ko suno)',
+      sound: 'Sound',
+      soundEffects: 'Sound effects',
+      memeVoicelines: 'Meme voicelines',
+      player: 'Player',
+      yourName: 'Tumhara naam',
+      leaveGame: 'Game Chhodo',
+      chatPlaceholder: 'Guess ya chat type karo...',
+
+      // Round result / Game over
+      roundOver: 'Round Khatam!',
+      you: 'Tum',
+      friend: 'Dost',
+      nextRoundStarting: 'Agla round shuru ho raha hai...',
+      gameOver: 'Game Khatam!',
+      playAgain: 'Phir Se Khelo',
+      backToHome: 'Home Par Wapas Jao',
+
+      // Hamburger menu
+      menu: 'Menu',
+      aboutDeveloper: 'Developer Ke Baare Mein',
+      sourceCode: 'Source Code',
+      giftDonate: 'Gift & Donate',
+      followConnect: 'Follow / Connect',
+      aboutDevP1: '<strong>Shiva Saini</strong> ek frontend developer hai jo GuessArt aur kuch aur browser-based games aur tools banata hai, sab free aur vanilla-JS mein, koi framework nahi.',
+      aboutDevP2: 'GuessArt ek Skribbl-style side project ke roop mein shuru hua tha aur ek pura peer-to-peer drawing & guessing game ban gaya, jisme voice chat, ek bot opponent hai, aur dost ke saath khelne ke liye koi backend nahi chahiye.',
+      aboutDevP3: 'Agar tumhe game pasand aaya, toh is menu mein Source Code aur Gift & Donate links isko aage support karne ka sabse achha tareeka hai.',
+      theme: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      language: 'Language',
+      langHint: 'Language menu, home screen, waiting room, in-game labels & legal pages badal deti hai.',
+      donateBody: 'GuessArt free hai aur hamesha free rahega. Agar isne tumhare group chat ki raat banayi, toh ek chhota sa tip ise chalte rehne aur behtar hone mein madad karta hai.',
+      copied: 'Copy ho gaya!',
+
+      // Contact Us
+      contactUs: 'Contact Us',
+      subject: 'Subject',
+      selectSubject: 'Ek subject chuno…',
+      bugReport: 'Bug Report',
+      featureRequest: 'Feature Request',
+      feedback: 'Feedback',
+      other: 'Other',
+      emailOptional: 'Email <span class="contact-optional">(optional)</span>',
+      emailPlaceholder: 'Tumhara email address (optional)',
+      message: 'Message',
+      messagePlaceholder: 'Apna message likho',
+      contactError: 'Please ek subject chuno aur message likho.',
+      sendMessage: 'Message Bhejo',
+
+      // Game Rules
+      rule1: 'Ek player canvas par secret word banata hai, baaki sab chat mein sahi guess type karne ki race karte hain.',
+      rule2: 'Jaldi guess karne se zyada points milte hain — timer har turn mein countdown karta hai, isliye jaldi wale sahi guess ka score late walo se zyada hota hai.',
+      rule3: 'Turns players ke beech automatically rotate hote hain. Kai rounds ke baad, sabse zyada total score wala player jeet jaata hai.',
+      rule4: 'Drawer apni khud ki turn ke dauran guess type nahi kar sakta, aur jab koi aur bana raha ho tab chat mein secret word type karna count nahi hota — ye dosto ke beech honor system par hai.',
+      rule5: 'Computer ke against khelna wahi scoring follow karta hai, bas doosre player ki jagah built-in bot ke against.',
+
+      // Terms of Service
+      terms1: 'GuessArt ek free, browser-based game hai jo as-is diya gaya hai, uptime, accuracy, ya kisi particular purpose ke liye fitness ki koi guarantee nahi hai.',
+      terms2: 'Koi account ya sign-up ki zaroorat nahi hai. Rooms turant banaye jaate hain aur sirf session ki duration ke liye exist karte hain — kisi bhi game ke baare mein kuch bhi permanently kisi server par store nahi hota.',
+      terms3: 'GuessArt ka use kuch bhi illegal, hateful, ya doosre player ko harass karne ke intention se banane, type karne, ya share karne ke liye mat karo. Rooms private hain aur un logo ke liye hain jinhe tumne khud invite kiya hai.',
+      terms4: 'Game, uska naam, aur uska logo Shiva Saini ke hain. Tum ise khelne aur iske links share karne ke liye welcome ho; please permission ke bina code ko apna bataakar redistribute mat karo.',
+      terms5: 'Ye terms game badalne ke saath update ho sakte hain. Update ke baad continued use ka matlab hai ki tum current version accept karte ho.',
+
+      // Privacy Policy
+      privacy1: 'GuessArt ko account ki zaroorat nahi hoti, isliye ye tumhara naam, email, ya koi personal identity collect nahi karta — jo nickname tum type karte ho wo tumhare device par local hota hai aur sirf tumhare room ke dost ke saath share hota hai.',
+      privacy2: 'Gameplay (drawing strokes, chat, voice) directly tumhare aur tumhare dost ke device ke beech peer-to-peer connection use karke jaata hai — koi central server tumhare games store ya record nahi karta.',
+      privacy3: 'Voice chat ke liye tumhare browser se microphone permission chahiye. Ye sirf tumhare dost ke saath live call ke liye use hota hai aur kabhi bhi record ya kahi upload nahi hota.',
+      privacy4: 'Agar tum Contact Us form use karte ho, toh jo message aur optional email tum dete ho wo directly developer ke inbox mein tumhare apne mail app ke through jaata hai — kuch bhi database mein store nahi hota.',
+      privacy5: 'Ye site game chalane ke liye zaroori third-party resources (jaise PeerJS connection library) load kar sakti hai, jo unke apne providers ki policies ke subject hain.',
     },
   };
 
-  // Buttons here mix an inline <svg> icon with trailing text, so we can't
-  // just set textContent on the whole button (that would wipe the icon).
-  // Instead, replace only the last text node — this matches how these
-  // buttons are authored in index.html (icon markup, then a plain text
-  // tail) without needing extra wrapper <span>s just for translation.
-  function setTrailingText(el, text) {
-    if (!el) return;
-    for (let i = el.childNodes.length - 1; i >= 0; i--) {
-      if (el.childNodes[i].nodeType === Node.TEXT_NODE) {
-        el.childNodes[i].textContent = ' ' + text;
-        return;
-      }
-    }
-    el.appendChild(document.createTextNode(' ' + text));
+  // Elements tagged data-i18n get plain text replaced (safe default —
+  // most strings are plain text and this avoids any HTML-injection risk
+  // for content that doesn't need markup).
+  function applyPlainText(lang) {
+    const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-i18n');
+      if (s[key] !== undefined) el.textContent = s[key];
+    });
+  }
+
+  // Elements tagged data-i18n-html get innerHTML replaced — used only
+  // for the handful of strings that legitimately contain markup
+  // (<strong> emphasis, a nested <span>), never for anything derived
+  // from user input.
+  function applyHtml(lang) {
+    const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
+    document.querySelectorAll('[data-i18n-html]').forEach((el) => {
+      const key = el.getAttribute('data-i18n-html');
+      if (s[key] !== undefined) el.innerHTML = s[key];
+    });
+  }
+
+  // Elements tagged data-i18n-placeholder get their placeholder
+  // attribute swapped (inputs/textareas can't use textContent).
+  function applyPlaceholders(lang) {
+    const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (s[key] !== undefined) el.setAttribute('placeholder', s[key]);
+    });
   }
 
   function apply(lang) {
-    const s = LANG_STRINGS[lang] || LANG_STRINGS.en;
-    const tagline = document.querySelector('.tagline');
-    const roomHint = document.querySelector('.mode-hint');
-
-    if (tagline) tagline.textContent = s.tagline;
-    // Deliberately NOT touching #input-name here: the nickname field has
-    // no native placeholder attribute at all (see index.html) — "Enter
-    // Nickname" / "e.g. Rahul" etc. is entirely driven by the animated
-    // #placeholder-text span (slidingPlaceholder() below). Setting a
-    // native placeholder on top of that renders BOTH at once, which is
-    // exactly the double-text overlap bug this comment prevents regressing.
-
-    setTrailingText(document.getElementById('tab-mode-friend'), s.playFriend);
-    setTrailingText(document.getElementById('tab-mode-bot'), s.playComputer);
-
-    const createTab = document.getElementById('subtab-create');
-    const joinTab = document.getElementById('subtab-join');
-    const createBtn = document.getElementById('btn-create');
-    const joinBtn = document.getElementById('btn-join');
-    if (createTab) createTab.textContent = s.createRoom;
-    if (joinTab) joinTab.textContent = s.joinRoom;
-    if (createBtn) createBtn.textContent = s.createRoom;
-    if (joinBtn) joinBtn.textContent = s.joinRoom;
-    if (roomHint) roomHint.textContent = s.roomHint;
+    applyPlainText(lang);
+    applyHtml(lang);
+    applyPlaceholders(lang);
+    // The animated name-field placeholder is driven by its own JS
+    // (slidingPlaceholder below) with a separate word list — restart it
+    // in the new language so the cycling examples match too.
+    if (typeof window.__restartNamePlaceholder === 'function') {
+      window.__restartNamePlaceholder(lang);
+    }
   }
 
   function get() {
@@ -577,7 +814,11 @@ function nudgeNameField() {
   const wrap = document.getElementById('name-placeholder');
   const mask = wrap.querySelector('.placeholder-mask');
   const textEl = document.getElementById('placeholder-text');
-  const phrases = ['Enter Nickname', 'e.g. Rahul', 'e.g. Priya', 'e.g. Sketchy_99'];
+  const PHRASES_BY_LANG = {
+    en: ['Enter Nickname', 'e.g. Rahul', 'e.g. Priya', 'e.g. Sketchy_99'],
+    hi: ['Nickname Daalo', 'jaise Rahul', 'jaise Priya', 'jaise Sketchy_99'],
+  };
+  let phrases = PHRASES_BY_LANG[LangManager.get()] || PHRASES_BY_LANG.en;
 
   let phraseIdx = 0;
   let timer = null;
@@ -649,6 +890,14 @@ function nudgeNameField() {
   nameInput.addEventListener('blur', () => {
     if (nameInput.value.length === 0) start();
   });
+
+  // Called by LangManager.apply() right after a language switch, so the
+  // cycling example names swap too instead of staying English forever.
+  window.__restartNamePlaceholder = function (lang) {
+    phrases = PHRASES_BY_LANG[lang] || PHRASES_BY_LANG.en;
+    phraseIdx = 0;
+    textEl.textContent = phrases[0];
+  };
 
   start();
 })();
