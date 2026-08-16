@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://guessart.netlify.app/sitemap.xml
+Sitemap: https://guessart.vercel.app/sitemap.xml
