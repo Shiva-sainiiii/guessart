@@ -1,9 +1,41 @@
 # GuessArt
 
 Mobile-first real-time drawing/guessing game for long-distance friends.
-Peer-to-peer via WebRTC (PeerJS) — no backend, no database.
+Peer-to-peer via WebRTC (PeerJS) — no backend, no database (except one
+tiny optional serverless function for bot chat — see Phase 2.12 below).
 
 _Formerly known as Sketch Duel — renamed to GuessArt._
+
+## Phase 2.12: Fixed banter timing bug + bot can now chat back, AI-ready
+
+- **Banter almost never fired**: it was only ever triggered from inside
+  the guess-tick loop's `else` branch (when `chooseGuess()` returned
+  nothing to say that tick) — which is rare, since the guessing logic
+  almost always has either a real answer or a scripted decoy ready once
+  the pattern has arrived. Banter now runs on its own independent
+  timer (random 8-18s cadence), completely decoupled from whether a
+  guess also fires that tick, and now fires on the bot-as-DRAWER side
+  too (previously it only existed on the guesser side at all).
+- **Bot can now reply when you actually talk to it** ("bhai hara diya
+  na", trash talk, random chat) — previously any chat message that
+  wasn't an exact word match got silently ignored. `js/bot.js`'s new
+  `BotChat` module first classifies an incoming message as either a
+  genuine guess attempt (untouched — still handled by the existing
+  exact-match/BotBrain logic) or plain conversation, and only
+  conversational messages get a reply, so the bot never comments on
+  every wrong guess.
+- **AI-ready, works today without any setup**: conversational replies
+  try `api/bot-chat.js` (a Vercel serverless function that calls
+  OpenRouter) first, and transparently fall back to a local canned
+  Hinglish reply pool if that call fails, times out, or — the default
+  state right now — `OPENROUTER_API_KEY` simply isn't set yet. Nothing
+  else needs to change in the frontend once the key is added; the
+  function starts actually calling the model the moment the env var
+  exists. See the comment header in `api/bot-chat.js` for setup steps.
+  Word guessing/drawing itself intentionally stays 100% local/rule-based
+  either way — only the "just talking" chat path is AI-eligible, since
+  routing actual gameplay through a network call would make it slower
+  and less predictable for no real benefit.
 
 ## Phase 2.11: Fixed fill leaking across the whole canvas + drawing accuracy pass
 

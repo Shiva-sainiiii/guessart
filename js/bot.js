@@ -11,15 +11,155 @@
 // need to fill (see BotBrain.chooseGuess / BotBrain.planDrawing below —
 // swap their internals for an API call later, the wiring here doesn't change).
 //
-// Two responsibilities live here:
+// Three responsibilities live here:
 //   1. BotBrain — the "intelligence": decides what to draw (a list of canvas
 //      strokes for a word) and decides what to type as a guess given the
 //      hints/clues it has received so far.
-//   2. BotPeer  — the "network stand-in": has the same shape as Connection
+//   2. BotChat  — the "voice": decides whether an incoming chat message is
+//      actually a word guess (handled by BotBrain, unchanged) or just the
+//      human talking ("bhai hara diya na", trash talk, random comments),
+//      and if it's the latter, gets a short in-character Hinglish reply —
+//      from a local canned pool by default, or from api/bot-chat.js (an
+//      OpenRouter-backed serverless function) once OPENROUTER_API_KEY is
+//      configured in Vercel. See BotChat.getReply below for the full
+//      Phase A (local) / Phase B (API) split.
+//   3. BotPeer  — the "network stand-in": has the same shape as Connection
 //      (send/onMessage/onOpen/isConnected/destroy...) but instead of going
-//      over WebRTC, it just calls BotBrain locally and echoes results back
-//      through its own message handlers on a short randomized delay (so it
-//      doesn't feel like an instant, robotic reflex).
+//      over WebRTC, it just calls BotBrain/BotChat locally and echoes
+//      results back through its own message handlers on a short
+//      randomized delay (so it doesn't feel like an instant, robotic
+//      reflex).
+
+// ---------------------------------------------------------------------
+// BotChat — conversational voice for non-guess chat messages
+// ---------------------------------------------------------------------
+// Kept entirely separate from BotBrain's guessing logic: a message only
+// ever reaches BotChat AFTER classifyMessage() below has decided it does
+// NOT look like a word-guess attempt, so nothing here can ever interfere
+// with actual gameplay scoring/correctness.
+const BotChat = (() => {
+
+  // ---- Classification: is this message a guess attempt, or just chat? ----
+  // Deliberately simple/local (no API call for this step — it needs to be
+  // instant, and it's only ever used to route where the reply comes from,
+  // never to judge correctness). A message reads as a GUESS attempt when
+  // it's short and shaped like someone trying an answer rather than
+  // typing a sentence; everything else is conversational.
+  const CONVERSATIONAL_MARKERS = [
+    'bhai', 'yaar', 'yrr', 'bro', 'lol', 'lmao', 'haha', 'hehe', 'wtf', 'omg',
+    'kya', 'kaise', 'kyun', 'kyu', 'nahi', 'nhi', 'haan', 'han', 'acha', 'achha',
+    'hara', 'jeet', 'jeeta', 'harra', 'chal', 'dekh', 'suno', 'are', 'arre',
+    'good', 'nice', 'wow', 'noob', 'pro', 'cheat', 'hint', 'help', 'please', 'plz',
+  ];
+
+  function classifyMessage(text, currentWordLength) {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return 'ignore';
+
+    const lower = trimmed.toLowerCase();
+    const wordCount = trimmed.split(/\s+/).length;
+    const hasQuestionOrExclaim = /[?!]{1,3}$/.test(trimmed);
+    const hasConversationalMarker = CONVERSATIONAL_MARKERS.some(m => {
+      const re = new RegExp(`(^|\\s)${m}(\\s|$)`, 'i');
+      return re.test(lower);
+    });
+
+    // Long messages, ones with sentence punctuation, or ones containing an
+    // obvious conversational marker word are chat, not guess attempts —
+    // regardless of length, since "bhai hara diya na?" would otherwise
+    // still be short enough to look guess-shaped.
+    if (hasConversationalMarker || hasQuestionOrExclaim || wordCount >= 4) {
+      return 'conversational';
+    }
+
+    // Very short (1-3 words), no punctuation, no chat markers — reads as
+    // a genuine guess attempt (right or wrong doesn't matter here, that's
+    // BotBrain's job elsewhere). Optionally cross-check against the
+    // current word's letter count when known, as a mild extra signal.
+    if (currentWordLength && Math.abs(trimmed.replace(/\s+/g, '').length - currentWordLength) > 6) {
+      return 'conversational'; // wildly different length than the secret word — unlikely to be a serious guess
+    }
+    return 'guess';
+  }
+
+  // ---- Phase A: local canned Hinglish replies (no network, always available) ----
+  const REPLY_ON_LOSS_TAUNT = [ // human is gloating about winning/the bot losing
+    "abhi round baaki hai bhai 😏", "itni jaldi khushi mat mana",
+    "dekhte hai agla round kiska hai 👀", "chal chal, luck tha bas",
+    "next round me pata chalega 😤",
+  ];
+  const REPLY_ON_WIN_TAUNT = [ // human is complaining the bot is too good / cheating accusation
+    "cheat nahi kar raha, bas skill hai 😎", "dimaag laga ke khela bhai",
+    "haha nahi yaar, seedha guess tha", "practice kiya hai thoda 😌",
+  ];
+  const REPLY_ON_HINT_REQUEST = [ // human is asking for a hint
+    "nahi bhai, khud soch 😏", "hint maangna mana hai yaha 🙅",
+    "thoda dimaag laga na yrr", "clue toh already de raha hu, aur nahi milega",
+  ];
+  const REPLY_GENERIC = [ // fallback for anything else conversational
+    "haha theek hai bhai 😂", "acha acha", "sahi hai yrr",
+    "chal aage badhte hai", "😂😂", "hmm sahi baat",
+    "waise tu khelta accha hai", "ye game maza aa raha hai na",
+  ];
+
+  function localReply(text) {
+    const lower = (text || '').toLowerCase();
+    if (/\b(hara|haar|lose|lost|jeet|jeeta|won|win)\b/.test(lower)) {
+      return REPLY_ON_LOSS_TAUNT[Math.floor(Math.random() * REPLY_ON_LOSS_TAUNT.length)];
+    }
+    if (/\b(cheat|kaise pata|how do you know|dimaag)\b/.test(lower)) {
+      return REPLY_ON_WIN_TAUNT[Math.floor(Math.random() * REPLY_ON_WIN_TAUNT.length)];
+    }
+    if (/\b(hint|clue|bata de|batade|help)\b/.test(lower)) {
+      return REPLY_ON_HINT_REQUEST[Math.floor(Math.random() * REPLY_ON_HINT_REQUEST.length)];
+    }
+    return REPLY_GENERIC[Math.floor(Math.random() * REPLY_GENERIC.length)];
+  }
+
+  // ---- Phase B: AI-backed reply via api/bot-chat.js (OpenRouter) ----
+  // Always tried first when fetch is available (browser environment);
+  // falls back to localReply() the moment anything goes wrong — timeout,
+  // network error, non-2xx, or the endpoint reporting stub mode (no
+  // OPENROUTER_API_KEY configured yet, see api/bot-chat.js's comment
+  // header). The caller never has to know which path actually served
+  // the reply; getReply always resolves to a usable string.
+  async function apiReply(text, botIsDrawer, roundContext) {
+    if (typeof fetch !== 'function') return null;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('/api/bot-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, botIsDrawer, roundContext }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data && data.reply) ? String(data.reply) : null;
+    } catch (err) {
+      return null; // network error, timeout, endpoint not deployed yet, etc — silently fall through to local reply
+    }
+  }
+
+  return {
+    // Returns 'guess' | 'conversational' | 'ignore'. Only 'conversational'
+    // messages should ever be routed to getReply below — a 'guess' stays
+    // entirely on BotBrain's existing exact-match path in BotPeer.send's
+    // 'chat' case, and 'ignore' (empty message) gets no reply at all.
+    classifyMessage,
+
+    // Resolves to a reply STRING (never null/empty) — tries the AI
+    // endpoint first, falls back to a local canned line so the bot always
+    // has something to say once classifyMessage has decided a reply is
+    // warranted.
+    async getReply(text, botIsDrawer, roundContext) {
+      const fromApi = await apiReply(text, botIsDrawer, roundContext);
+      return fromApi || localReply(text);
+    },
+  };
+})();
 
 // ---------------------------------------------------------------------
 // BotBrain — drawing templates + guessing heuristics
@@ -607,6 +747,7 @@ const BotPeer = (() => {
   // than once every few strokes.
   let strokeCountThisRound = 0;
   let banterFiredThisRound = 0;
+  let banterTimer = null;
   const MAX_BANTER_PER_ROUND = 2;
 
   const ROUND_SECONDS = 70; // must match Game's ROUND_SECONDS (js/game.js) so bot-as-drawer timeouts land at the same moment the human's own timer UI hits 0
@@ -644,17 +785,39 @@ const BotPeer = (() => {
     return BANTER_LINES[Math.floor(Math.random() * BANTER_LINES.length)];
   }
 
-  // Called from the guess-tick loop when the bot decides NOT to guess
-  // this tick — a chance to send banter instead, so the chat doesn't go
-  // silent between guesses. Capped per round and gated on the human
-  // having actually started drawing (same fairness rule as real guesses).
+  // Called on its own independent schedule (see startBanterLoop below),
+  // completely decoupled from the guess-tick loop. Previously this only
+  // ran from inside the guesser's tick() in the branch where
+  // chooseGuess() returned nothing to say — which is rare, since
+  // chooseGuessLocal almost always has EITHER a real answer or a
+  // scripted decoy ready once the pattern has arrived, so in practice
+  // banter almost never got a turn to fire. Banter now runs on its own
+  // timer regardless of whether a guess also fires that tick, and fires
+  // for the bot-as-DRAWER side too (previously banter only existed on
+  // the guesser side at all).
   function maybeSendBanter() {
-    if (!humanHasStartedDrawing) return;
+    if (roundOver) return;
+    if (!botIsDrawer && !humanHasStartedDrawing) return; // same fairness rule as real guesses: don't chat like it's watching a drawing that doesn't exist yet
     if (banterFiredThisRound >= MAX_BANTER_PER_ROUND) return;
-    if (Math.random() < 0.45) {
-      banterFiredThisRound += 1;
-      emit({ type: 'chat', text: randomBanterText(), name: botName, msgId: 'bot' + Date.now() });
+    banterFiredThisRound += 1;
+    emit({ type: 'chat', text: randomBanterText(), name: botName, msgId: 'bot' + Date.now() });
+  }
+
+  // Independent banter timer: reschedules itself on a random 8-18s
+  // cadence for as long as the round is active, regardless of whatever
+  // the guess-tick (or the drawing pacer) is doing. Started once per
+  // turn from both startBotDrawing() and startBotGuessing(); stopped by
+  // clearTimers() clearing banterTimer at the next turn boundary.
+  function startBanterLoop() {
+    function tick() {
+      const delay = 8000 + Math.random() * 10000;
+      banterTimer = setTimeout(() => {
+        if (roundOver) return;
+        maybeSendBanter();
+        tick();
+      }, delay);
     }
+    tick();
   }
 
   function emit(data) {
@@ -681,6 +844,7 @@ const BotPeer = (() => {
     clearTimeout(drawTimer);
     clearTimeout(guessTimer);
     clearTimeout(roundTimeoutTimer);
+    clearTimeout(banterTimer);
     drawQueue = [];
     roundOver = false;
     humanHasStartedDrawing = false;
@@ -780,6 +944,7 @@ const BotPeer = (() => {
       drawTimer = setTimeout(tick, perItem + (Math.random() * 40 - 20));
     }
     drawTimer = setTimeout(tick, 500);
+    startBanterLoop(); // independent of the stroke pacer above — fires on its own schedule regardless of drawing progress
   }
 
   // Bot-as-guesser: periodically evaluate whether it has enough signal
@@ -791,6 +956,7 @@ const BotPeer = (() => {
   // which reads as the bot "thinking" rather than insta-solving.
   function startBotGuessing() {
     guesserState = BotBrain.newGuesserState();
+    startBanterLoop(); // independent of the guess-tick loop below — fires on its own schedule regardless of whether a guess also fires that tick
     let tickCount = 0;
     function tick() {
       tickCount += 1;
@@ -810,8 +976,6 @@ const BotPeer = (() => {
         if (roundOver) return;
         if (guess) {
           emit({ type: 'chat', text: guess, name: botName, msgId: 'bot' + Date.now() });
-        } else {
-          maybeSendBanter();
         }
         tick();
       }, delay);
@@ -857,17 +1021,49 @@ const BotPeer = (() => {
           }
           break;
         }
-        case 'chat':
-          // Human typed a guess/chat message — if bot is drawing, check it.
-          if (botIsDrawer && secretWord && !roundOver) {
-            const norm = t => t.trim().toLowerCase().replace(/\s+/g, '');
-            if (norm(data.text) === norm(secretWord)) {
-              roundOver = true;
-              clearTimeout(roundTimeoutTimer);
-              emit({ type: 'correct_guess', word: secretWord });
-            }
+        case 'chat': {
+          // Human typed a chat message — could be a real guess attempt at
+          // the secret word, or just them talking ("bhai hara diya na",
+          // trash talk, a random comment). The exact-match "did they get
+          // it right" check only makes sense when the BOT is drawing
+          // (secretWord is only ever populated on that side — see
+          // getRandomWordForBot() above, only called from the drawer
+          // branch); when the bot is guessing, correctness is the human
+          // drawer's own client's job, not ours. But conversational
+          // replies should work in BOTH directions — the human might
+          // chat at the bot regardless of who's drawing — so that part
+          // runs unconditionally below.
+          if (roundOver) break;
+          const norm = t => t.trim().toLowerCase().replace(/\s+/g, '');
+          if (botIsDrawer && secretWord && norm(data.text) === norm(secretWord)) {
+            roundOver = true;
+            clearTimeout(roundTimeoutTimer);
+            emit({ type: 'correct_guess', word: secretWord });
+            break;
           }
+
+          // Not a correct-answer match (or bot is guessing, where this
+          // check doesn't apply anyway). Decide whether it even LOOKS
+          // like a guess attempt versus plain chat — BotBrain's own
+          // guessing logic elsewhere already handles actual right/wrong
+          // scoring on both sides; this is purely about whether the bot
+          // should say something back. wordLen is only available (and
+          // only useful as a soft signal) when the bot itself is
+          // drawing and therefore knows the secret word; when the bot
+          // is guessing, classification just runs without that hint.
+          const wordLen = (botIsDrawer && secretWord) ? secretWord.replace(/\s+/g, '').length : null;
+          const kind = BotChat.classifyMessage(data.text, wordLen);
+          if (kind !== 'conversational') break; // looked like a guess attempt — bot doesn't need to comment on every miss
+
+          const roundContext = botIsDrawer
+            ? 'bot is currently drawing, human is guessing'
+            : 'human is currently drawing, bot is guessing';
+          BotChat.getReply(data.text, botIsDrawer, roundContext).then(reply => {
+            if (roundOver) return; // round ended while the reply was in flight — don't send a stale chat line
+            emit({ type: 'chat', text: reply, name: botName, msgId: 'bot' + Date.now() });
+          });
           break;
+        }
         case 'word_length':
           // Human (drawer) told us the letter/space pattern. This was
           // previously dropped entirely — guesserState.pattern stayed
