@@ -1114,14 +1114,22 @@ function handleMessage(data) {
       // on us. Auto-accept — there's no reason to make them wait on a
       // confirmation dialog for a "run it back" request, and this mirrors
       // the same auto-start flow the original room join already has.
-      Net.send({ type: 'rematch_accept' });
+      // Echo their requestId back so their client can match this accept
+      // to the specific tap that triggered it (see pendingRematchId).
+      Net.send({ type: 'rematch_accept', requestId: data.requestId });
       resetForRematch();
       break;
     case 'rematch_accept':
       // Our own rematch request was accepted — start the new game now
       // that we know the friend's client is restarting in lockstep.
-      if (rematchWaitingForFriend) {
-        rematchWaitingForFriend = false;
+      // Match against pendingRematchId rather than a plain boolean: a
+      // genuine-but-late accept (arriving just after our own 8s local
+      // timeout already gave up and re-enabled the button) would
+      // otherwise be silently dropped here, leaving our client stuck on
+      // the game-over screen while the friend's had already moved on
+      // to the new game — see the comment above pendingRematchId.
+      if (pendingRematchId && data.requestId === pendingRematchId) {
+        pendingRematchId = null;
         resetForRematch();
       }
       break;
@@ -1360,6 +1368,28 @@ function onTimerTick(t) {
     Net.send({ type: 'timeout', word });
     showRoundResult(false, word);
   }
+
+  // GUESSER-SIDE WATCHDOG: the drawer's client is normally the only one
+  // that sends 'timeout', but a mobile browser can throttle background
+  // tabs hard enough that a backgrounded drawer's setInterval-based
+  // timer (see js/game.js's startTimer) stalls or fires late — the
+  // guesser's own timer UI still reaches 0 fine (their tab is presumably
+  // in the foreground, since they're the one actively watching/guessing),
+  // but the 'timeout' message that only the drawer sends never arrives,
+  // and the round just hangs with a stuck 0 on screen.
+  //
+  // If we're the GUESSER and our own local timer has run a few seconds
+  // past zero with no resolution (no 'timeout' or 'correct_guess' ever
+  // arriving to end the round), force it to a local timeout ourselves.
+  // The small negative buffer (rather than firing at exactly 0) gives
+  // the drawer's real 'timeout' message a fair chance to arrive first
+  // over ordinary network latency/jitter — this is purely a fallback
+  // for the "drawer's timer straight up never fired" case, not a race
+  // against the normal path.
+  if (t <= -4 && !Game.isDrawerTurn() && Game.isRoundActive()) {
+    console.warn('[Game] guesser-side timeout watchdog fired — drawer never sent timeout');
+    showRoundResult(false, null); // word unknown to the guesser — round result screen shows "Time's Up!" without revealing it
+  }
 }
 
 function showRoundResult(wasGuessed, word) {
@@ -1374,7 +1404,14 @@ function showRoundResult(wasGuessed, word) {
   resultTitle.innerHTML = wasGuessed
     ? `<svg class="icon icon-inline" width="20" height="20"><use href="#icon-palette"/></svg> Correct!`
     : `<svg class="icon icon-inline" width="20" height="20"><use href="#icon-clock"/></svg> Time's Up!`;
-  document.getElementById('result-word').innerHTML = `The word was: <b>${word}</b>`;
+  // word can be null here specifically when the GUESSER-side timeout
+  // watchdog fires (see onTimerTick) — the guesser never actually knows
+  // the secret word, only the drawer does, so there's nothing honest to
+  // reveal. Show a graceful fallback line instead of literally printing
+  // "The word was: null".
+  document.getElementById('result-word').innerHTML = word
+    ? `The word was: <b>${word}</b>`
+    : `Round ended — word will reveal once ${friendName} reconnects.`;
   document.getElementById('rr-my-score').textContent = state.myScore;
   document.getElementById('rr-friend-score').textContent = state.friendScore;
   document.getElementById('rr-my-label').textContent = myName;
@@ -1449,7 +1486,27 @@ function onGameEnd({ myScore, friendScore }) {
 // Now it restarts the SAME session in place: the WebRTC link (or the
 // BotPeer) stays alive, scores reset, and turn order flips so whoever
 // went second last game gets to draw first this time.
-let rematchWaitingForFriend = false;
+//
+// RACE FIX: the original version used a single boolean
+// (rematchWaitingForFriend) to represent "am I waiting on a response".
+// That boolean can't tell one rematch_request apart from another, so
+// if the 8s local timeout fired (friend was just slow, not gone) and
+// THEN the friend's rematch_accept arrived a moment later, the
+// 'rematch_accept' handler's `if (rematchWaitingForFriend)` guard was
+// already false — the accept was silently dropped. Result: the
+// friend's client had already reset into a new game (they auto-accept
+// unconditionally in 'rematch_request'), but ours stayed stuck on the
+// game-over screen with a re-enabled button — a real desync where one
+// side thinks a new game started and the other doesn't.
+//
+// Fix: tag every rematch_request with a unique id. The timeout only
+// gives up on THAT specific id — if it already resolved (accept
+// arrived, possibly a hair after a slow timeout tick) or a NEWER
+// request superseded it, the timeout is a no-op. The accept handler
+// also no longer requires an exact boolean match — it just checks
+// "is this accept for the request I'm currently waiting on", so a
+// late-but-genuine accept still gets honored instead of dropped.
+let pendingRematchId = null;
 
 function resetForRematch() {
   const btn = document.getElementById('btn-play-again');
@@ -1482,14 +1539,17 @@ document.getElementById('btn-play-again').addEventListener('click', () => {
   // host so turn-order bookkeeping (amHost) doesn't need to renegotiate.
   btn.disabled = true;
   btn.innerHTML = 'Waiting for friend...';
-  rematchWaitingForFriend = true;
-  Net.send({ type: 'rematch_request' });
+  const requestId = 'rm' + Date.now() + Math.floor(Math.random() * 1000);
+  pendingRematchId = requestId;
+  Net.send({ type: 'rematch_request', requestId });
 
   setTimeout(() => {
-    if (rematchWaitingForFriend) {
-      // Friend didn't respond in time (disconnected, or on an old
-      // client version) — don't leave the button stuck forever.
-      rematchWaitingForFriend = false;
+    // Only act if THIS request is still the one we're waiting on — if
+    // it already resolved (accept came through, even a hair late) or
+    // got superseded by a newer tap, pendingRematchId has moved on and
+    // this timeout is stale, so it does nothing.
+    if (pendingRematchId === requestId) {
+      pendingRematchId = null;
       btn.disabled = false;
       btn.innerHTML = `<svg class="icon icon-inline" width="16" height="16"><use href="#icon-refresh"/></svg> Play Again`;
       setStatus("Friend didn't respond — try again or go back home.", true);

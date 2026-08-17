@@ -132,8 +132,30 @@ const DrawCanvas = (() => {
       // Iterative stack-based fill (recursion would blow the call stack on
       // large canvases). Scanline variant keeps this fast enough for a
       // typical phone-sized drawing area.
+      //
+      // LEAK GUARD: even with the tolerance-based matching above, a
+      // genuinely open outline (not just an anti-aliased hairline gap —
+      // an outline that never actually closes, which a fast one-finger
+      // sketch can easily produce) still has nowhere to stop, and the
+      // fill legitimately has no "wall" to hit. Rather than only
+      // detecting this after the fact, cap the fill at a fraction of
+      // the canvas: if this single flood-fill is about to color more
+      // than FILL_LEAK_THRESHOLD of the total pixels, treat it as a
+      // leak, discard the in-progress imgData (never call
+      // ctx.putImageData), and bail out silently. A LEGITIMATE fill
+      // (a closed shape someone actually drew) is essentially always a
+      // small-to-moderate region relative to the whole canvas — a
+      // shape big enough to intentionally fill 85%+ of the drawing
+      // area in one bucket-tap is vanishingly rare in practice, so this
+      // threshold catches true leaks without getting in the way of
+      // real gameplay.
+      const FILL_LEAK_THRESHOLD = 0.85;
+      const maxFillablePixels = Math.floor(w * h * FILL_LEAK_THRESHOLD);
+
       const stack = [[startX, startY]];
       const visited = new Uint8Array(w * h); // avoid re-queuing/re-scanning the same row segment from multiple directions
+      let filledCount = 0;
+      let leaked = false;
       while (stack.length) {
         const [x, y] = stack.pop();
         if (visited[y * w + x]) continue;
@@ -152,6 +174,7 @@ const DrawCanvas = (() => {
           const fillIdx = (y * w + i) * 4;
           data[fillIdx] = fr; data[fillIdx + 1] = fg; data[fillIdx + 2] = fb; data[fillIdx + 3] = fa;
           visited[y * w + i] = 1;
+          filledCount++;
 
           if (y > 0) {
             const upIdx = ((y - 1) * w + i) * 4;
@@ -162,6 +185,21 @@ const DrawCanvas = (() => {
             if (!visited[(y + 1) * w + i] && fillable(downIdx)) stack.push([i, y + 1]);
           }
         }
+
+        if (filledCount > maxFillablePixels) {
+          leaked = true;
+          break; // stop scanning immediately — no point continuing to spill further
+        }
+      }
+
+      if (leaked) {
+        // Discard everything this fill touched — do NOT write imgData
+        // back to the canvas. The canvas visually stays exactly as it
+        // was before this fill was attempted, same as if the tap had
+        // never happened, instead of showing a half-spilled or
+        // fully-flooded mess.
+        console.warn('[DrawCanvas] flood fill aborted: likely leak (outline not closed)');
+        return;
       }
 
       ctx.putImageData(imgData, 0, 0);
