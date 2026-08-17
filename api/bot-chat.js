@@ -49,7 +49,6 @@ const REQUEST_TIMEOUT_MS = 6000; // fail fast — a slow AI reply is worse than 
 const SYSTEM_PROMPT = `You are a playful, slightly cheeky friend playing a Pictionary-style drawing/guessing game called GuessArt with the user. You are texting in casual Hinglish (a natural mix of Hindi and English, written in Latin/English script, the way young Indian friends actually text each other) — not pure Hindi, not formal English.
 
 Rules:
-- Do not send thinking.
 - Keep replies SHORT: one line, max ~ 3-4 words. This is a fast chat, not an essay.
 - Stay in character as a friend/rival in the game, not an assistant. Never say "I am an AI" or offer help/assistance.
 - You can be a little cocky, teasing, or dramatic, but always good-natured — never actually rude or insulting.
@@ -117,6 +116,13 @@ Reply in character as described.`;
         ],
         max_tokens: 60,
         temperature: 0.9,
+        // Nemotron (and other reasoning-capable OpenRouter models) emit a
+        // <think>...</think> reasoning block before the actual reply —
+        // a system-prompt instruction like "don't show thinking" does NOT
+        // suppress this, because the model isn't choosing to show it, the
+        // API is returning it as a separate reasoning pass by default.
+        // This has to be turned off via the request param, not the prompt.
+        reasoning: { enabled: false },
       }),
       signal: controller.signal,
     });
@@ -132,9 +138,16 @@ Reply in character as described.`;
     }
 
     const data = await response.json();
-    const reply = data && data.choices && data.choices[0] && data.choices[0].message
+    let reply = data && data.choices && data.choices[0] && data.choices[0].message
       ? String(data.choices[0].message.content || '').trim()
       : '';
+
+    // Belt-and-suspenders: even with reasoning disabled above, some
+    // reasoning models still occasionally leak a <think>...</think> (or
+    // unclosed <think>...) block into `content` instead of the separate
+    // `reasoning` field. Strip it so it never reaches the chat UI.
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    reply = reply.replace(/<think>[\s\S]*$/gi, '').trim();
 
     if (!reply) {
       res.status(200).json({ reply: null });

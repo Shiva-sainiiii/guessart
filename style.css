@@ -91,6 +91,26 @@ body {
 }
 .screen.active { display: flex; }
 
+/* ===== DESKTOP/LAPTOP FRAME =====
+   On a wide (mouse-driven) screen the 420px phone-width card would
+   otherwise just sit flush left with a huge empty gray gap on the
+   right. Give it a subtle framed "phone on a desk" presentation
+   instead — a soft shadowed edge around the app column — so it reads
+   as an intentional layout rather than a mobile page that forgot to
+   go responsive. Purely cosmetic; nothing about game logic/canvas
+   sizing changes, since .screen's own max-width is untouched. */
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
+  body {
+    display: flex;
+    justify-content: center;
+  }
+  #app-viewport {
+    max-width: 420px;
+    min-height: 100vh;
+    box-shadow: 0 0 0 1px var(--glass-border), 0 24px 80px rgba(0, 0, 0, 0.55);
+  }
+}
+
 /* Defense-in-depth: explicitly force every non-active screen to stay
    hidden with !important. This guards against exactly the class of bug
    found in .screen-game before — a more specific or later-declared rule
@@ -116,16 +136,22 @@ body {
 }
 
 /* ===== ROTATE GUARD =====
-   Hidden by default; shown ONLY in landscape (see media query below).
-   Pure CSS, no JS/API dependency, so it works the same regardless of
-   how a given browser handles Fullscreen/Orientation-Lock — the game
-   is portrait-only, and this is a hard visual+interaction block rather
-   than trying to maintain a second landscape layout for a drawing game
-   that doesn't make sense sideways anyway. */
+   Hidden by default; shown ONLY when a small touch device (phone/tablet)
+   is actually rotated into landscape — see media query below. Pure CSS,
+   no JS/API dependency.
+
+   IMPORTANT: this is scoped with `and (max-width: 900px)` and `and
+   (hover: none)` so it ONLY fires for small handheld screens turned
+   sideways. A laptop/desktop is permanently "landscape" by nature (wide
+   screen, mouse instead of touch), so without that scoping this guard
+   used to block the game entirely on any computer. The 420px card
+   (see .screen max-width) already just centers nicely with room to
+   spare on a wide monitor, so desktops/laptops need no guard at all —
+   only a phone/tablet that's been physically turned sideways does. */
 #rotate-guard {
   display: none;
 }
-@media (orientation: landscape) {
+@media (orientation: landscape) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
   #rotate-guard {
     display: flex;
     position: fixed;
