@@ -33,6 +33,43 @@ const Connection = (() => {
   let reconnectTimer = null;
   let intentionalClose = false; // true when destroy() is called on purpose — skips auto-reconnect
 
+  // WebRTC ICE server config: STUN alone (PeerJS's default) is enough
+  // for most connections, but fails outright for players behind
+  // symmetric NAT / strict corporate or campus firewalls / some mobile
+  // carrier NATs — a real chunk of real-world "friend on a different
+  // network" pairings. A TURN server relays media/data when a direct
+  // peer-to-peer path can't be negotiated at all, which STUN can never
+  // do on its own (STUN only helps peers discover their own public
+  // address; it doesn't relay anything).
+  //
+  // Uses Google's public STUN servers (free, no auth) plus Open Relay
+  // Project's free public TURN servers (openrelay.metered.ca — no
+  // signup needed, rate-limited but fine for a small casual game). For
+  // production traffic at scale, swap these TURN credentials for your
+  // own (Twilio, Xirsys, Cloudflare, or a self-hosted coturn instance)
+  // via the same iceServers array shape.
+  const ICE_SERVERS = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+    ],
+  };
+
   function generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -90,7 +127,7 @@ const Connection = (() => {
       isHost = true;
       myId = generateRoomCode();
       roomCode = myId;
-      peer = new Peer(myId, { debug: 1 });
+      peer = new Peer(myId, { debug: 1, config: ICE_SERVERS });
 
       peer.on('open', (id) => onCode(id));
 
@@ -124,7 +161,7 @@ const Connection = (() => {
       isHost = false;
       myId = generateRoomCode();
       roomCode = code;
-      peer = new Peer(myId, { debug: 1 });
+      peer = new Peer(myId, { debug: 1, config: ICE_SERVERS });
 
       peer.on('open', () => {
         conn = peer.connect(code, { reliable: true });

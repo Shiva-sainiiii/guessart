@@ -383,19 +383,45 @@ const DrawCanvas = (() => {
       if (strokeHistory.length > MAX_HISTORY) strokeHistory.shift();
     },
 
-    // Drawer-side undo: pop the last entry (stroke gesture OR fill),
-    // repaint locally by replaying full history, and return the
-    // remaining history so app.js can send it to the guesser for an
-    // exact replay (simplest correct way to keep both canvases in sync
-    // without a heavier diff protocol).
+    // Drawer-side undo: pop the last entry (stroke gesture OR fill) and
+    // repaint locally from the remaining history.
+    //
+    // Previously this returned the full remaining strokeHistory array so
+    // app.js could send the WHOLE thing to the guesser as the 'undo'
+    // message's payload every single time. That works, but on a
+    // detailed drawing near MAX_HISTORY (150 entries, each a full
+    // stroke gesture's worth of segments) it means every undo tap sent
+    // a payload that only grows as the drawing gets more complex —
+    // exactly when a slower connection can least afford it, and right
+    // when someone's actively trying to fix a mistake and wants it to
+    // feel instant. Undo only ever removes ONE entry, so there's no
+    // reason to resend the other 149 unchanged ones every time — see
+    // undoLocal() below, which the guesser now uses instead.
     undo() {
       strokeHistory.pop();
       redrawAll();
       return strokeHistory.slice();
     },
 
-    // Guesser-side: receives the drawer's remaining history after an
-    // undo and repaints exactly to match.
+    // Guesser-side: mirrors the drawer's own undo() — pop the last
+    // history entry and repaint from what's left — instead of receiving
+    // and replacing the entire history array over the wire. This is
+    // safe as long as both sides' strokeHistory arrays are already in
+    // sync (true for the normal case: every stroke/fill the drawer made
+    // was already relayed and recorded via renderRemoteStroke/
+    // renderRemoteFill as it happened). The network message itself
+    // carries no payload now — see the 'undo' case in app.js.
+    undoLocal() {
+      strokeHistory.pop();
+      redrawAll();
+    },
+
+    // Guesser-side fallback: receives an explicit history array and
+    // replaces strokeHistory wholesale. Kept for cases where an exact
+    // resync is genuinely needed (e.g. a reconnect mid-round where the
+    // guesser's local history can't be trusted to already match the
+    // drawer's) rather than the common-case single-entry undo, which
+    // now goes through the lighter undoLocal() above instead.
     replay(history) {
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);

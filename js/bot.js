@@ -1034,7 +1034,20 @@ const BotPeer = (() => {
           // chat at the bot regardless of who's drawing — so that part
           // runs unconditionally below.
           if (roundOver) break;
-          const norm = t => t.trim().toLowerCase().replace(/\s+/g, '');
+          // Same normalization as Game.drawerChecksGuess in js/game.js
+          // (strips accents/punctuation/whitespace, not just whitespace)
+          // — kept as an identical local copy rather than a shared
+          // import since this file has no module system to pull from
+          // game.js with, but the two must stay in sync so a human
+          // guessing against the bot gets exactly the same leniency
+          // ("auto-rickshaw!" counting correct) as guessing against a
+          // real friend.
+          const norm = t => t
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase()
+            .replace(/[.,!?'"''""\-_]/g, '')
+            .replace(/\s+/g, '');
           if (botIsDrawer && secretWord && norm(data.text) === norm(secretWord)) {
             roundOver = true;
             clearTimeout(roundTimeoutTimer);

@@ -11,7 +11,7 @@
 //   { type: 'stroke', x1,y1,x2,y2,color,width }      — a drawing segment
 //   { type: 'fill', x, y, color }                      — a bucket-fill action
 //   { type: 'clear' }                                — drawer cleared the canvas
-//   { type: 'undo', history }                          — drawer removed last stroke/fill; history is the remaining stroke+fill list to replay
+//   { type: 'undo' }                                  — drawer removed last stroke/fill; guesser pops their own last history entry locally (no payload — see DrawCanvas.undoLocal). An optional legacy `history` array is still honored as a full-replay fallback if ever present, but is never sent by this client.
 //   { type: 'chat', text, name }                     — chat/guess message
 //   { type: 'correct_guess', word }                  — drawer confirms a guess was correct
 //   { type: 'timeout' }                              — drawer's timer ran out with no correct guess
@@ -1074,7 +1074,17 @@ function handleMessage(data) {
       DrawCanvas.clear();
       break;
     case 'undo':
-      DrawCanvas.replay(data.history);
+      // Lightweight path (see DrawCanvas.undoLocal / btn-undo handler
+      // above): just pop our own last history entry and redraw, since
+      // it's already in sync with the drawer's. Falls back to the full
+      // replay() only if a legacy/mismatched payload ever arrives with
+      // an explicit history array (defensive — normal traffic never
+      // sends one anymore).
+      if (data.history) {
+        DrawCanvas.replay(data.history);
+      } else {
+        DrawCanvas.undoLocal();
+      }
       break;
     case 'chat':
       handleIncomingChat(data.text, data.name, false, data.msgId);
@@ -1263,6 +1273,16 @@ function setupReconnectHandling() {
         timeLeft: state.timeLeft,
       });
     }
+
+    // Voice does NOT come back on its own. A dropped data connection
+    // means the underlying RTCPeerConnection died too — the original
+    // PeerJS call object from the very first autoConnect() is dead,
+    // even though `conn`/`peer` themselves reconnected. Without an
+    // explicit redial here, text/drawing resume fine after a reconnect
+    // but voice stays silently dead for the rest of the game. No-op
+    // for a bot game (VoiceCall.redial() only acts if autoConnect() was
+    // ever actually called, which setupVoiceCall() skips for bot games).
+    if (!isBotGame) VoiceCall.redial();
   });
 
   Net.onReconnectFailed(() => {
@@ -1543,8 +1563,13 @@ function setupToolbar() {
 
   document.getElementById('btn-undo').addEventListener('click', () => {
     if (!Game.isDrawerTurn() || !DrawCanvas.hasHistory()) return;
-    const remainingHistory = DrawCanvas.undo();
-    Net.send({ type: 'undo', history: remainingHistory });
+    // No payload needed — the guesser's strokeHistory is already in
+    // sync (every stroke/fill was relayed and recorded as it happened),
+    // so a bare signal is enough for them to pop their own last entry
+    // and redraw locally via DrawCanvas.undoLocal(). See canvas.js for
+    // why this replaced sending the full remaining history array.
+    DrawCanvas.undo();
+    Net.send({ type: 'undo' });
   });
 
   document.getElementById('btn-clear-canvas').addEventListener('click', () => {
@@ -1650,11 +1675,16 @@ function setupVoiceCall() {
   // would stack duplicate listeners on the same underlying peer).
   if (!voiceCallHandlersRegistered) {
     voiceCallHandlersRegistered = true;
-    const targetId = Connection.friendPeerId();
+    // Passed as a function (not a one-time string snapshot) so both the
+    // initial call AND any later VoiceCall.redial() after a reconnect
+    // (see setupReconnectHandling's onReconnected below) always ask
+    // Connection for the friend's CURRENT peer id, instead of dialing
+    // out to a value captured once here at game start.
+    const getTargetId = () => Connection.friendPeerId();
     // Only the host places the outgoing call — the guest just listens.
     // This avoids both sides simultaneously dialing each other, which
     // PeerJS can handle but there's no reason to invite the race.
-    VoiceCall.autoConnect(() => Connection.getRawPeer(), amHost, targetId, setVoiceState);
+    VoiceCall.autoConnect(() => Connection.getRawPeer(), amHost, getTargetId, setVoiceState);
   }
 
   micBtn.addEventListener('click', () => {

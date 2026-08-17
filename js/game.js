@@ -93,7 +93,25 @@ const Game = (() => {
     // like "ice cream" match even if the guesser typed "icecream" or
     // "rain bow" for "rainbow" — spacing shouldn't be what trips up a
     // correct guess.
-    return text.trim().toLowerCase().replace(/\s+/g, '');
+    //
+    // Also strip common punctuation ("ice-cream", "icecream!", "pizza?",
+    // "it's a ghost." typed sloppily) and normalize accented Latin
+    // letters to their plain equivalents (café -> cafe) via Unicode
+    // NFD decomposition + stripping combining diacritical marks — none
+    // of the current WORD_LIST entries use accents, but this keeps a
+    // guesser from being penalized by autocorrect/IME-inserted accents
+    // or curly quotes their keyboard added without them noticing.
+    // Word-internal characters that are never meaningful in an English
+    // word/guess (.,!?'"-_) are removed rather than treated as part of
+    // the answer; this never over-matches two DIFFERENT words in
+    // WORD_LIST, since none of them are punctuation-adjacent minimal
+    // pairs (no "ice-cream" vs "ice.cream" style collisions exist here).
+    return text
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+      .trim()
+      .toLowerCase()
+      .replace(/[.,!?'"''""\-_]/g, '') // strip common punctuation
+      .replace(/\s+/g, ''); // strip all remaining whitespace
   }
 
   return {
