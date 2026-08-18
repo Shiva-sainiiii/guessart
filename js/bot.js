@@ -248,13 +248,6 @@ const BotChat = (() => {
       const fromApi = await apiReply(text, botIsDrawer, roundContext);
       return fromApi || localReply(text);
     },
-
-    // Exposed so callers can get an INSTANT local fallback line without
-    // waiting on/racing the network path — used by BotPeer's chat
-    // handler as the last-resort text for its watchdog timeout (see
-    // "HARD WATCHDOG" comment below), so a stuck/never-resolving
-    // getReply() can never leave a direct human message unanswered.
-    localReply,
   };
 })();
 
@@ -832,14 +825,6 @@ const BotPeer = (() => {
   let roundTimeoutTimer = null;
   let roundOver = false;
   let drawQueue = [];
-  // How many of secretWord's clues have actually been sent to the
-  // guesser via the real { type: 'clue' } messages so far this round
-  // (see startBotDrawing's clue-scheduling below, which increments
-  // this each time one fires). clueBasedBanterLine() only ever draws
-  // from clues[0..cluesRevealedCount-1] — i.e. things the guesser has
-  // ALREADY legitimately been told — so smart banter can never spoil a
-  // clue earlier than the real clue system would have revealed it.
-  let cluesRevealedCount = 0;
   // True once the human (drawer) has actually put at least one stroke on
   // the canvas this round. The bot's guess-timer loop checks this before
   // ever speaking — guessing before a single line exists would feel
@@ -1158,68 +1143,6 @@ const BotPeer = (() => {
     '👌', '🥲', '😬', '🤞', '👍', '🧐', '😤', '🫡',
   ];
 
-  // ---- Smart, clue-aware drawer banter ----
-  // When the BOT is the drawer, it already knows exactly what it's
-  // drawing (secretWord) and already has that word's 2-3 hand-written
-  // clue sentences (js/words.js, the same ones ClueSystem cycles to the
-  // guesser as { type: 'clue' } messages). Previously the drawer-side
-  // banter pool (DRAWER_BANTER_LINES above) was 100% generic ("bhai ye
-  // easy hai, jaldi bata de") regardless of whether the bot was drawing
-  // an apple or a bicycle — it never actually referenced what was on
-  // the canvas. This wraps the SAME clue sentences already being sent
-  // through the real clue system in a casual Hinglish chat frame, so
-  // the bot's banter reads like a friend dropping an aside about their
-  // OWN drawing ("are pata hai... You sit on it." -> feels like real
-  // in-character commentary) instead of a disconnected generic line.
-  //
-  // Deliberately reuses the exact clue text rather than inventing new
-  // facts about the word — the clue list is the single source of truth
-  // for "things safe to reveal about this word without saying the word
-  // itself" (hand-audited to never contain the word), so wrapping it is
-  // the only way to guarantee the smart banter never accidentally leaks
-  // something the clue author didn't intend to reveal yet.
-  const CLUE_WRAP_TEMPLATES = [
-    text => `are pata hai... ${text}`,
-    text => `ek chhota sa hint: ${text}`,
-    text => `waise batau, ${lowerFirst(text)}`,
-    text => `${text} samajh me aaya kuch?`,
-    text => `free hint: ${text}`,
-    text => `arre haan, ${lowerFirst(text)}`,
-    text => `ek baat batau... ${lowerFirst(text)}`,
-    text => `${text} isse kuch idea mila?`,
-    text => `by the way, ${lowerFirst(text)}`,
-    text => `dhyan se sun: ${text}`,
-    text => `ye bhi try kr: ${lowerFirst(text)}`,
-    text => `${text} bas itna hi bata sakta hu`,
-    text => `soch soch... ${lowerFirst(text)}`,
-    text => `ek aur cheez, ${lowerFirst(text)}`,
-    text => `${text} kaafi bada hint hai ye`,
-  ];
-
-  function lowerFirst(text) {
-    if (!text) return text;
-    return text.charAt(0).toLowerCase() + text.slice(1);
-  }
-
-  // Returns a clue-derived banter line for the CURRENT secretWord, or
-  // null if there's nothing safe to use yet (guesser side, a word with
-  // no clue list, or no clue has actually been revealed to the guesser
-  // yet this round). Only ever called with botIsDrawer === true — see
-  // randomBanterText below — so this never runs on the guesser side,
-  // where the bot legitimately doesn't know the word and must not
-  // appear to. Restricted to clues[0..cluesRevealedCount-1] so smart
-  // banter can only reference something the guesser has ALREADY been
-  // told via the real clue system — never a spoiler ahead of schedule.
-  function clueBasedBanterLine() {
-    if (!secretWord || cluesRevealedCount <= 0) return null;
-    const clues = (typeof getCluesForWord === 'function' ? getCluesForWord(secretWord) : []) || [];
-    const revealed = clues.slice(0, cluesRevealedCount);
-    if (revealed.length === 0) return null;
-    const clue = revealed[Math.floor(Math.random() * revealed.length)];
-    const wrap = CLUE_WRAP_TEMPLATES[Math.floor(Math.random() * CLUE_WRAP_TEMPLATES.length)];
-    return wrap(clue);
-  }
-
   function randomBanterText(botIsDrawerNow) {
     // Occasionally fire an emoji-only reaction instead of a full line,
     // same as how people actually chat — works the same regardless of
@@ -1227,22 +1150,8 @@ const BotPeer = (() => {
     if (Math.random() < 0.35) {
       return BANTER_EMOJIS[Math.floor(Math.random() * BANTER_EMOJIS.length)];
     }
-    // When the bot is drawing, lean toward clue-aware lines most of the
-    // time (feels like the bot is actually commenting on ITS OWN
-    // drawing — "ye khane ki cheez hai" while sketching an apple —
-    // rather than generic filler that could apply to any word). Still
-    // mix in the generic DRAWER_BANTER_LINES some of the time so it
-    // doesn't feel like every single message is a hint dump; and always
-    // fall back to generic if there's no clue available (e.g. a custom
-    // word with an empty clue list).
-    if (botIsDrawerNow) {
-      if (Math.random() < 0.65) {
-        const clueLine = clueBasedBanterLine();
-        if (clueLine) return clueLine;
-      }
-      return DRAWER_BANTER_LINES[Math.floor(Math.random() * DRAWER_BANTER_LINES.length)];
-    }
-    return GUESSER_BANTER_LINES[Math.floor(Math.random() * GUESSER_BANTER_LINES.length)];
+    const pool = botIsDrawerNow ? DRAWER_BANTER_LINES : GUESSER_BANTER_LINES;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   // Called on its own independent schedule (see startBanterLoop below),
@@ -1302,158 +1211,28 @@ const BotPeer = (() => {
     }, delay);
   }
 
-  // ---- Typing indicator lifecycle ----
-  // The "…is typing" bubble needs to cover a chat reply's ENTIRE
-  // compose time, not just a short fixed tail-delay right before
-  // sending — a scripted decoy guess's random wait, and critically
-  // BotChat.getReply()'s real network round trip to the OpenRouter API
-  // (can legitimately take 1-5 real seconds), both happen BEFORE the
-  // reply text is ready. Showing the bubble only after that point (the
-  // original, simpler design) meant a fast local canned reply looked
-  // like it had "no typing effect" at all (the bubble flashed too
-  // briefly around an already-decided message) while a slow API reply
-  // felt disconnected from the bubble entirely.
-  //
-  //   acquireSpeakerLock() — call the MOMENT the bot decides it MIGHT
-  //                          say something, before any "thinking"
-  //                          happens. Returns a unique token on success,
-  //                          or null if something else already holds
-  //                          the lock (see SERIALIZATION below).
-  //   finishTypingAndSend(text, token) — call once the reply text is
-  //                          actually ready. Pass the token from
-  //                          acquireSpeakerLock() if you have one (so
-  //                          the same bubble is reused rather than a
-  //                          second one opened); pass nothing to take
-  //                          the lock fresh right now instead. Keeps
-  //                          the bubble up for a short extra beat
-  //                          proportional to message length (an
-  //                          already-composed reply still takes a
-  //                          moment to "type out"), then swaps it for
-  //                          the real chat message.
-  // emitChat(text) below is a convenience wrapper for callers with no
-  // separate "thinking" phase to cover, e.g. banter, which is a
-  // scripted one-liner with no real async work between deciding to
-  // speak and having the text ready.
-  //
-  // SERIALIZATION: banter (its own independent timer), guesses/decoys,
-  // and conversational replies (triggered by the human's own chat) can
-  // all decide to speak within moments of each other — e.g. the human
-  // sends a taunt right as the independent banter timer also fires, or
-  // even sends two messages close together, each spawning its own
-  // BotChat.getReply() call. Without coordination, two overlapping
-  // "compose" cycles would each try to own the single typing bubble and
-  // each schedule their own stop+send, causing one message's
-  // typing_stop to cut off the other's still-in-progress bubble, two
-  // chat lines to land back-to-back with no bubble between them, or (a
-  // real bug hit during testing) a LATE-resolving promise from an
-  // earlier, already-finished compose cycle mistaking the lock's
-  // current (unrelated, newer) holder for its own and firing an
-  // orphaned typing_stop/double-send.
-  //
-  // Fixed with token-based ownership rather than a bare boolean: each
-  // time a compose cycle successfully acquires the lock it's handed a
-  // unique `pendingSpeakerToken`. Any code that resolves later (a
-  // promise, a setTimeout) must present that SAME token before it's
-  // allowed to touch the bubble/send — if the token it was given no
-  // longer matches the current one, the lock has since moved on to a
-  // different, newer message, and that stale attempt is a no-op instead
-  // of corrupting the newer one's state. A bare boolean can't tell two
-  // different owners apart; a token can.
-  let pendingSpeakerToken = null; // null when free; otherwise a unique object identifying whoever currently holds the "bot is composing" lock
-  let queuedSpeak = null; // a single deferred `() => {...}` to run once the lock frees up; newer requests overwrite older still-queued ones rather than stacking up a backlog
-
-  function runQueuedSpeakIfAny() {
-    if (queuedSpeak) {
-      const fn = queuedSpeak;
-      queuedSpeak = null;
-      fn();
-    }
-  }
-
-  // Tries to acquire the lock fresh. Returns the token on success (the
-  // caller must hang onto it and pass it to finishTypingAndSend), or
-  // null if something else already holds it (caller should NOT show a
-  // bubble/send in that case — it should have gone through
-  // speakOrQueue instead, or simply skip its optional pre-roll).
-  function acquireSpeakerLock() {
-    if (roundOver || pendingSpeakerToken) return null;
-    pendingSpeakerToken = {};
+  // Sends a chat message preceded by a realistic "…is typing" beat —
+  // 'typing_start' immediately, then the actual 'chat' message (still
+  // routed through emit()'s own latency jitter) only after a delay
+  // roughly proportional to how long the message is, the way a person
+  // actually takes longer to type a sentence than to type "lol". If the
+  // round ends while the bot is "typing", the pending chat is dropped
+  // and a 'typing_stop' fires immediately so the indicator never gets
+  // stuck showing after the round is over.
+  function emitChat(text) {
+    if (roundOver) return; // never start a "typing…" beat for a round that's already over
     messageHandlers.forEach(fn => fn({ type: 'typing_start', name: botName }));
-    return pendingSpeakerToken;
-  }
-
-  // finishTypingAndSend now takes the token the caller was given by
-  // acquireSpeakerLock (or omits it, meaning "I never tried to
-  // pre-acquire, just take the lock fresh right now"). If a token IS
-  // passed but no longer matches the live pendingSpeakerToken, someone
-  // else has since
-  // taken over the lock (e.g. this call is a stale promise resolving
-  // late after a different message already finished and moved on) —
-  // in that case this is a safe no-op rather than corrupting the
-  // current, unrelated holder's in-flight bubble/timer.
-  function finishTypingAndSend(text, token) {
-    if (roundOver) {
-      if (token === undefined || token === pendingSpeakerToken) {
-        if (pendingSpeakerToken) messageHandlers.forEach(fn => fn({ type: 'typing_stop' }));
-        pendingSpeakerToken = null;
-        runQueuedSpeakIfAny();
-      }
-      return; // round ended while composing — don't send a stale line, but still clear the bubble if it was ours
-    }
-    if (token !== undefined && token !== null && token !== pendingSpeakerToken) {
-      return; // stale caller — the lock has since moved on to someone else; do nothing
-    }
-    if (!pendingSpeakerToken) {
-      pendingSpeakerToken = {};
-      messageHandlers.forEach(fn => fn({ type: 'typing_start', name: botName }));
-    }
-    const myToken = pendingSpeakerToken;
     // ~180-260ms per character, the way a quick but human phone-typer
     // sends a short chat line, clamped to a sane 500ms-2.6s window so a
     // one-word reply doesn't feel sluggish and a long line doesn't stall
-    // the chat for ages. This is deliberately still applied even for an
-    // API reply that already took real network time to arrive — the
-    // TOTAL bubble duration ends up being "thinking time" (however long
-    // the API/decoy-guess wait actually was) PLUS this "typing it out"
-    // beat, which reads as more human than either alone.
+    // the chat for ages.
     const perChar = 180 + Math.random() * 80;
     const typingMs = Math.min(2600, Math.max(500, text.length * perChar));
     setTimeout(() => {
-      // Re-check ownership before touching anything — myToken should
-      // always still equal pendingSpeakerToken at this point given the
-      // guards above (nothing else can steal an already-acquired lock
-      // mid-flight), but checking is free and keeps this function
-      // provably safe to reason about on its own.
-      if (myToken !== pendingSpeakerToken) return;
       messageHandlers.forEach(fn => fn({ type: 'typing_stop' }));
-      pendingSpeakerToken = null;
-      if (roundOver) { runQueuedSpeakIfAny(); return; } // round ended mid-"typing" — don't send a stale line after the fact, but still let anything queued (which will itself no-op on the roundOver check) clear out
+      if (roundOver) return; // round ended mid-"typing" — don't send a stale line after the fact
       emit({ type: 'chat', text, name: botName, msgId: 'bot' + Date.now() });
-      runQueuedSpeakIfAny(); // now that this message is fully sent, let whatever collided with it (a banter tick, another reply, etc.) take its turn
     }, typingMs);
-  }
-
-  // Runs `speakFn` now if nothing else is mid-compose, or defers it to
-  // run immediately after the current one finishes. Every caller that
-  // can independently decide to speak (banter's timer, a guess-tick, a
-  // conversational reply) should go through this rather than calling
-  // finishTypingAndSend() directly, so overlapping triggers queue up
-  // one-at-a-time instead of colliding.
-  function speakOrQueue(speakFn) {
-    if (roundOver) return;
-    if (pendingSpeakerToken) {
-      queuedSpeak = speakFn; // last-writer-wins if multiple things pile up during one busy stretch — still better than an ever-growing backlog of stale banter firing minutes later
-      return;
-    }
-    speakFn();
-  }
-
-  // Convenience wrapper for callers with no separate "thinking" phase —
-  // finishTypingAndSend already self-starts the bubble if it isn't
-  // showing yet (see its own comment above), so this is just a thin
-  // named alias for readability at simple call sites like banter.
-  function emitChat(text) {
-    speakOrQueue(() => finishTypingAndSend(text));
   }
 
   function clearTimers() {
@@ -1466,7 +1245,6 @@ const BotPeer = (() => {
     humanHasStartedDrawing = false;
     strokeCountThisRound = 0;
     banterFiredThisRound = 0;
-    cluesRevealedCount = 0;
     // guesserState must NOT survive into a new turn. Without this reset,
     // a round where the bot draws (no guesserState touched at all) left
     // the PREVIOUS round's guesser state (its old pattern, its old
@@ -1506,13 +1284,8 @@ const BotPeer = (() => {
 
     // Send a clue every ~12s, mirroring ClueSystem's pacing.
     const clues = (typeof getCluesForWord === 'function' ? getCluesForWord(word) : []) || [];
-    cluesRevealedCount = 0;
     clues.forEach((text, i) => {
-      setTimeout(() => {
-        if (roundOver) return;
-        cluesRevealedCount = i + 1;
-        emit({ type: 'clue', text });
-      }, 4000 + i * 12000);
+      setTimeout(() => emit({ type: 'clue', text }), 4000 + i * 12000);
     });
 
     // When the bot is drawing, IT is the "drawer's client" and so must be
@@ -1586,28 +1359,6 @@ const BotPeer = (() => {
       // arrive first); later ticks are a touch snappier.
       const base = tickCount === 1 ? 5000 : 3500;
       const delay = base + Math.random() * 4000;
-      // Show the typing bubble for the LAST ~1.2-2s of this wait rather
-      // than only right as the guess is about to be sent — reads as
-      // "bot pauses/reads the clue, THEN starts typing its guess"
-      // instead of the bubble appearing to come from nowhere at the
-      // very last instant. Purely cosmetic pre-roll; the actual
-      // guess-decision logic below is unaffected either way. Skipped
-      // entirely if something else (banter, a reply) is already
-      // mid-compose — acquireSpeakerLock() itself no-ops in that case
-      // (returns null), so this is just avoiding scheduling pointless
-      // work, not a correctness requirement.
-      //
-      // myPreRollToken (captured in THIS tick()'s own closure) is what
-      // makes this safe against the exact race that used to bite the
-      // old boolean-flag version: two different tick() calls, or a
-      // tick() overlapping a conversational reply, could no longer tell
-      // each other's lock ownership apart. Now each attempt only ever
-      // acts on the token IT was personally handed back.
-      let myPreRollToken = null;
-      const typingLeadMs = Math.min(delay - 300, 1200 + Math.random() * 800);
-      if (typingLeadMs > 300) {
-        setTimeout(() => { myPreRollToken = acquireSpeakerLock(); }, delay - typingLeadMs);
-      }
       guessTimer = setTimeout(() => {
         if (roundOver) return;
         // Never guess (not even a scripted decoy) until the human has
@@ -1615,34 +1366,11 @@ const BotPeer = (() => {
         // before any line exists reads as the bot cheating/psychic, even
         // when that answer is deliberately wrong. Keep polling quietly
         // at the same cadence instead of guessing blind.
-        if (!humanHasStartedDrawing) {
-          if (myPreRollToken && myPreRollToken === pendingSpeakerToken) {
-            messageHandlers.forEach(fn => fn({ type: 'typing_stop' }));
-            pendingSpeakerToken = null;
-            runQueuedSpeakIfAny();
-          }
-          tick();
-          return;
-        }
+        if (!humanHasStartedDrawing) { tick(); return; }
         const guess = BotBrain.chooseGuess(guesserState);
         if (roundOver) return;
         if (guess) {
-          // If our own pre-roll above successfully acquired the lock
-          // AND still owns it (nobody else could have taken it in
-          // between, since acquireSpeakerLock only hands out a token
-          // when free), pass that exact token through so
-          // finishTypingAndSend reuses the same open bubble instead of
-          // re-acquiring. Otherwise — pre-roll window was too short to
-          // schedule, OR something else grabbed the lock first and our
-          // pre-roll returned null — go through speakOrQueue so we
-          // either take the lock fresh or queue politely behind
-          // whatever's currently speaking, rather than barging in.
-          if (myPreRollToken) finishTypingAndSend(guess, myPreRollToken);
-          else speakOrQueue(() => finishTypingAndSend(guess));
-        } else if (myPreRollToken && myPreRollToken === pendingSpeakerToken) {
-          messageHandlers.forEach(fn => fn({ type: 'typing_stop' })); // pre-roll fired but there's nothing to say this tick — clear OUR OWN bubble
-          pendingSpeakerToken = null;
-          runQueuedSpeakIfAny();
+          emitChat(guess);
         }
         tick();
       }, delay);
@@ -1738,65 +1466,10 @@ const BotPeer = (() => {
           const roundContext = botIsDrawer
             ? 'bot is currently drawing, human is guessing'
             : 'human is currently drawing, bot is guessing';
-          // The human directly addressed the bot here — try to grab the
-          // typing-bubble lock immediately (covers the bot's full
-          // "thinking" time, including a possibly slow real-network
-          // BotChat.getReply() call, not just a brief tail-delay before
-          // sending) but WITHOUT forcing it: acquireSpeakerLock() itself
-          // returns null if something else (banter, a guess-tick)
-          // already holds the lock, so this never collides with/steals
-          // another in-flight message's bubble. Either way, kick off
-          // getReply() regardless of whether we got the lock —
-          // thinking/composing the text doesn't need it, only showing
-          // the bubble + sending does. myReplyToken (captured in THIS
-          // handler's own closure) is what lets the .then() below tell
-          // "did I keep the lock the whole time" apart from "someone
-          // else has since taken over" — the exact ambiguity that used
-          // to cause a late-resolving reply to steal/corrupt a newer,
-          // unrelated message's in-flight bubble when two human chats
-          // arrived close together (each spawning its own getReply()).
-          const myReplyToken = acquireSpeakerLock();
-          // HARD WATCHDOG: BotChat.getReply() already has its own
-          // internal 5-6s network timeout (see apiReply's
-          // AbortController in this file, and REQUEST_TIMEOUT_MS in
-          // api/bot-chat.js) — but a live report showed the typing
-          // bubble getting stuck for over a MINUTE with no reply ever
-          // arriving, which is far longer than either of those budgets
-          // allow for. Rather than trust that every layer of that timeout
-          // chain is airtight in every deployment environment (a cold
-          // serverless start, a proxy/CDN buffering the response, a
-          // fetch() polyfill that doesn't honor AbortSignal correctly,
-          // etc — any of which could make the promise below never
-          // settle), race getReply() against an unconditional 7s
-          // Promise.race timeout that ALWAYS resolves to null (falling
-          // through to the same local-reply path apiReply already uses
-          // for ordinary failures). This guarantees the lock/bubble
-          // physically cannot stay stuck longer than ~7s no matter what
-          // goes wrong upstream, while still giving the real API a fair
-          // shot first.
-          const watchdog = new Promise(resolve => setTimeout(() => resolve(null), 7000));
-          Promise.race([BotChat.getReply(data.text, botIsDrawer, roundContext), watchdog])
-            .then(reply => {
-              if (roundOver) return; // round ended while the reply was in flight — nothing to show or send
-              const finalReply = reply || BotChat.localReply(data.text); // watchdog (or a getReply that itself resolved null) still needs SOME line to send — never leave the human's direct message unanswered
-              if (myReplyToken && myReplyToken === pendingSpeakerToken) {
-                finishTypingAndSend(finalReply, myReplyToken); // we still hold the lock we opened above — reuse it
-              } else {
-                speakOrQueue(() => finishTypingAndSend(finalReply)); // never acquired it, or someone else has since taken over — queue politely instead of barging in
-              }
-            })
-            .catch(() => {
-              // Should be unreachable (getReply never rejects, watchdog
-              // never rejects) but if something upstream ever throws
-              // instead of resolving, still guarantee the lock releases
-              // and the human gets SOME reply rather than silence.
-              if (roundOver) return;
-              if (myReplyToken && myReplyToken === pendingSpeakerToken) {
-                finishTypingAndSend(BotChat.localReply(data.text), myReplyToken);
-              } else {
-                speakOrQueue(() => finishTypingAndSend(BotChat.localReply(data.text)));
-              }
-            });
+          BotChat.getReply(data.text, botIsDrawer, roundContext).then(reply => {
+            if (roundOver) return; // round ended while the reply was in flight — don't send a stale chat line
+            emitChat(reply);
+          });
           break;
         }
         case 'word_length':

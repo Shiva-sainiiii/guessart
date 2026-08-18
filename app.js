@@ -1880,7 +1880,6 @@ function setupChat() {
   function submit() {
     const text = input.value.trim();
     if (!text) return;
-    stopTypingSignal(); // sending the message IS the end of typing — don't leave a stray typing_start hanging for the other side
     sendChat(text);
     input.value = '';
   }
@@ -1889,51 +1888,6 @@ function setupChat() {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submit();
   });
-
-  // ---- Outgoing typing indicator (real player-vs-player games) ----
-  // BotPeer already synthesizes its OWN 'typing_start'/'typing_stop'
-  // messages locally (see js/bot.js's startTyping/finishTypingAndSend)
-  // since the bot has no real keyboard — but for a real friend, nobody
-  // was ever telling THEIR client "I'm typing" at all, so the indicator
-  // never had anything to show on that side. This wires the same
-  // network messages from actual keystrokes: a 'typing_start' fires
-  // (at most once per ~pause, not on every keystroke) as soon as the
-  // input goes from empty to non-empty or after a lull, and
-  // 'typing_stop' fires either after ~2.5s of no further typing, when
-  // the field is cleared, or when the message is actually sent (see
-  // submit() above). Net.send() safely no-ops toward a bot opponent
-  // (BotPeer.send only switches on the message types it actually
-  // handles — see its switch statement — so an unrecognized 'typing_*'
-  // type sent TO the bot is just ignored, not an error) — the bot never
-  // reads its own human's typing state, it only ever sends its own.
-  let typingActive = false;
-  let typingStopTimer = null;
-
-  function startTypingSignal() {
-    if (!typingActive) {
-      typingActive = true;
-      Net.send({ type: 'typing_start', name: myName });
-    }
-    clearTimeout(typingStopTimer);
-    typingStopTimer = setTimeout(stopTypingSignal, 2500);
-  }
-
-  function stopTypingSignal() {
-    clearTimeout(typingStopTimer);
-    if (typingActive) {
-      typingActive = false;
-      Net.send({ type: 'typing_stop' });
-    }
-  }
-
-  input.addEventListener('input', () => {
-    if (input.value.trim().length > 0) {
-      startTypingSignal();
-    } else {
-      stopTypingSignal(); // field emptied (e.g. selected-all + delete) — no point signaling typing over nothing
-    }
-  });
-  input.addEventListener('blur', stopTypingSignal);
 }
 
 function sendChat(text) {
