@@ -248,6 +248,13 @@ const BotChat = (() => {
       const fromApi = await apiReply(text, botIsDrawer, roundContext);
       return fromApi || localReply(text);
     },
+
+    // Exposed so callers can get an INSTANT local fallback line without
+    // waiting on/racing the network path — used by BotPeer's chat
+    // handler as the last-resort text for its watchdog timeout (see
+    // "HARD WATCHDOG" comment below), so a stuck/never-resolving
+    // getReply() can never leave a direct human message unanswered.
+    localReply,
   };
 })();
 
@@ -1749,14 +1756,47 @@ const BotPeer = (() => {
           // unrelated message's in-flight bubble when two human chats
           // arrived close together (each spawning its own getReply()).
           const myReplyToken = acquireSpeakerLock();
-          BotChat.getReply(data.text, botIsDrawer, roundContext).then(reply => {
-            if (roundOver) return; // round ended while the reply was in flight — nothing to show or send
-            if (myReplyToken && myReplyToken === pendingSpeakerToken) {
-              finishTypingAndSend(reply, myReplyToken); // we still hold the lock we opened above — reuse it
-            } else {
-              speakOrQueue(() => finishTypingAndSend(reply)); // never acquired it, or someone else has since taken over — queue politely instead of barging in
-            }
-          });
+          // HARD WATCHDOG: BotChat.getReply() already has its own
+          // internal 5-6s network timeout (see apiReply's
+          // AbortController in this file, and REQUEST_TIMEOUT_MS in
+          // api/bot-chat.js) — but a live report showed the typing
+          // bubble getting stuck for over a MINUTE with no reply ever
+          // arriving, which is far longer than either of those budgets
+          // allow for. Rather than trust that every layer of that timeout
+          // chain is airtight in every deployment environment (a cold
+          // serverless start, a proxy/CDN buffering the response, a
+          // fetch() polyfill that doesn't honor AbortSignal correctly,
+          // etc — any of which could make the promise below never
+          // settle), race getReply() against an unconditional 7s
+          // Promise.race timeout that ALWAYS resolves to null (falling
+          // through to the same local-reply path apiReply already uses
+          // for ordinary failures). This guarantees the lock/bubble
+          // physically cannot stay stuck longer than ~7s no matter what
+          // goes wrong upstream, while still giving the real API a fair
+          // shot first.
+          const watchdog = new Promise(resolve => setTimeout(() => resolve(null), 7000));
+          Promise.race([BotChat.getReply(data.text, botIsDrawer, roundContext), watchdog])
+            .then(reply => {
+              if (roundOver) return; // round ended while the reply was in flight — nothing to show or send
+              const finalReply = reply || BotChat.localReply(data.text); // watchdog (or a getReply that itself resolved null) still needs SOME line to send — never leave the human's direct message unanswered
+              if (myReplyToken && myReplyToken === pendingSpeakerToken) {
+                finishTypingAndSend(finalReply, myReplyToken); // we still hold the lock we opened above — reuse it
+              } else {
+                speakOrQueue(() => finishTypingAndSend(finalReply)); // never acquired it, or someone else has since taken over — queue politely instead of barging in
+              }
+            })
+            .catch(() => {
+              // Should be unreachable (getReply never rejects, watchdog
+              // never rejects) but if something upstream ever throws
+              // instead of resolving, still guarantee the lock releases
+              // and the human gets SOME reply rather than silence.
+              if (roundOver) return;
+              if (myReplyToken && myReplyToken === pendingSpeakerToken) {
+                finishTypingAndSend(BotChat.localReply(data.text), myReplyToken);
+              } else {
+                speakOrQueue(() => finishTypingAndSend(BotChat.localReply(data.text)));
+              }
+            });
           break;
         }
         case 'word_length':
