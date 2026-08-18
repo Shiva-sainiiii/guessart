@@ -1309,6 +1309,38 @@ button {
 .bubble-meta .ticks { color: var(--text-dim); letter-spacing: -2px; }
 .bubble-meta .ticks.seen { color: var(--primary); }
 
+/* ===== TYPING INDICATOR =====
+   Same bubble shell as a "theirs" message (left-aligned, .theirs bubble
+   background) but holding three bouncing dots instead of text — the
+   familiar WhatsApp/iMessage "…is typing" affordance. Rendered as its
+   own transient .chat-row (id'd so it can be found and removed again)
+   rather than reusing addChatMessage, since it's not a real message and
+   must never get a msgId/ticks/timestamp or count toward chat history. */
+.chat-row.typing-row {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+.chat-row.typing-row .bubble {
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 15px;
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
 .chat-row.system-row {
   align-self: center;
   max-width: 90%;

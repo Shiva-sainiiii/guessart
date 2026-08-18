@@ -1087,7 +1087,14 @@ function handleMessage(data) {
       }
       break;
     case 'chat':
+      hideTypingIndicator(); // the typed message has now actually arrived — swap the "…" bubble out for the real one
       handleIncomingChat(data.text, data.name, false, data.msgId);
+      break;
+    case 'typing_start':
+      showTypingIndicator(data.name);
+      break;
+    case 'typing_stop':
+      hideTypingIndicator();
       break;
     case 'seen':
       markMessageSeen(data.msgId);
@@ -1396,6 +1403,7 @@ function showRoundResult(wasGuessed, word) {
   if (!Game.isRoundActive() && document.getElementById('screen-round-result').classList.contains('active')) {
     return; // avoid double-trigger
   }
+  hideTypingIndicator(); // round's over — don't let a stray "…" bubble linger into the result screen or next turn
   Game.endRoundTimeout(); // safe no-op if already ended; ensures timer cleared
   ClueSystem.stop(); // stop the rotating hint timer so it doesn't bleed into the next turn
   const state = Game.getState();
@@ -1957,6 +1965,37 @@ function addSystemChatMessage(text) {
   row.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
   log.appendChild(row);
   log.scrollTop = log.scrollHeight;
+}
+
+// ===== Typing indicator =====
+// Shows/hides a "…is typing" bubble in the chat log, driven by
+// 'typing_start' / 'typing_stop' network messages (see handleMessage's
+// 'typing_start'/'typing_stop' cases, and BotPeer in js/bot.js which
+// sends these around every bot chat message). Only one indicator is
+// ever shown at a time — a fixed DOM id, created on demand and removed
+// again, rather than tracked per-sender, since this is a 1-on-1 chat
+// (solo vs bot, or 1v1 vs a friend) and only the OTHER person's typing
+// state is ever relevant to show.
+function showTypingIndicator(name) {
+  const log = document.getElementById('chat-log');
+  if (!log) return;
+  let row = document.getElementById('typing-indicator-row');
+  if (row) return; // already showing — don't duplicate/reset its animation
+  row = document.createElement('div');
+  row.id = 'typing-indicator-row';
+  row.className = 'chat-row theirs typing-row';
+  const senderLabel = name ? `<div class="chat-sender">${escapeHtml(name)}</div>` : '';
+  row.innerHTML = `
+    ${senderLabel}
+    <div class="bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+  `;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const row = document.getElementById('typing-indicator-row');
+  if (row) row.remove();
 }
 
 function markMessageSeen(msgId) {
