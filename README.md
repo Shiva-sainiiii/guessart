@@ -1,460 +1,364 @@
-# GuessArt
+# GuessArt 🎨
 
-Mobile-first real-time drawing/guessing game for long-distance friends.
-Peer-to-peer via WebRTC (PeerJS) — no backend, no database (except one
-tiny optional serverless function for bot chat — see Phase 2.12 below).
+**Draw. Guess. Roast your friend.**
+
+A mobile-first, real-time Pictionary-style drawing & guessing game that
+runs entirely peer-to-peer in the browser — no backend server, no
+database, no accounts. Two players connect directly via WebRTC, take
+turns drawing a secret word while the other guesses in chat, and talk
+trash over always-on voice while they do it. There's also a fully
+offline "Play vs Computer" mode for solo play with no friend required.
 
 _Formerly known as Sketch Duel — renamed to GuessArt._
 
-## Phase 2.12: Fixed banter timing bug + bot can now chat back, AI-ready
+🔗 **Live:** [guessart.vercel.app](https://guessart.vercel.app)
 
-- **Banter almost never fired**: it was only ever triggered from inside
-  the guess-tick loop's `else` branch (when `chooseGuess()` returned
-  nothing to say that tick) — which is rare, since the guessing logic
-  almost always has either a real answer or a scripted decoy ready once
-  the pattern has arrived. Banter now runs on its own independent
-  timer (random 8-18s cadence), completely decoupled from whether a
-  guess also fires that tick, and now fires on the bot-as-DRAWER side
-  too (previously it only existed on the guesser side at all).
-- **Bot can now reply when you actually talk to it** ("bhai hara diya
-  na", trash talk, random chat) — previously any chat message that
-  wasn't an exact word match got silently ignored. `js/bot.js`'s new
-  `BotChat` module first classifies an incoming message as either a
-  genuine guess attempt (untouched — still handled by the existing
-  exact-match/BotBrain logic) or plain conversation, and only
-  conversational messages get a reply, so the bot never comments on
-  every wrong guess.
-- **AI-ready, works today without any setup**: conversational replies
-  try `api/bot-chat.js` (a Vercel serverless function that calls
-  OpenRouter) first, and transparently fall back to a local canned
-  Hinglish reply pool if that call fails, times out, or — the default
-  state right now — `OPENROUTER_API_KEY` simply isn't set yet. Nothing
-  else needs to change in the frontend once the key is added; the
-  function starts actually calling the model the moment the env var
-  exists. See the comment header in `api/bot-chat.js` for setup steps.
-  Word guessing/drawing itself intentionally stays 100% local/rule-based
-  either way — only the "just talking" chat path is AI-eligible, since
-  routing actual gameplay through a network call would make it slower
-  and less predictable for no real benefit.
+---
 
-## Phase 2.11: Fixed fill leaking across the whole canvas + drawing accuracy pass
+## Table of Contents
 
-- **"Fill leaks and paints the entire canvas"**: root-caused to two
-  compounding issues. (1) `floodFillRaw()` in `js/canvas.js` matched
-  pixels by EXACT color equality — but canvas strokes are anti-aliased,
-  so the pixels right along any outline are a blend, not a pure exact
-  match to either the background or the ink. That made the fill treat
-  the anti-aliased ring around a thin or slightly-open line as "still
-  open", walking straight through it and spilling across the whole
-  canvas. Rewrote it to use color-DISTANCE tolerance matching (the same
-  approach every real paint-bucket tool uses), so near-background
-  anti-aliased pixels correctly read as fillable right up to the actual
-  ink. (2) Separately and more fundamentally, `js/drawings.js`'s
-  hand-authored entries had ~50 fill actions sitting on outlines that
-  weren't actually closed (the stroke's start and end points didn't
-  touch) — some gaps as large as 80-90% of the canvas — which no amount
-  of pixel tolerance can contain, since there's no wall there at all no
-  matter how it's matched. Audited and closed every one of these across
-  all 130 words (see below), AND added a runtime safety net in
-  `js/bot.js`: `drawingStepsToBeats()` now checks the outline
-  immediately before any fill and auto-inserts a same-color closing
-  segment if it isn't already closed, so even a future hand-drawn entry
-  that's imperfectly closed can't leak.
-- **Drawing accuracy pass across all 130 `js/drawings.js` entries**:
-  every gesture that's followed by a fill now forms a genuinely closed
-  polygon, and every fill's x,y was recomputed to the shape's true
-  geometric centroid (rather than a hand-placed point that could drift
-  outside on a redraw) — this alone fixed dozens of fills that were
-  technically "inside enough" before but landed suspiciously close to
-  an edge. Ten of the most broken entries (burger, peacock, chili,
-  popcorn, waterfall, desert, lightning, canyon, climbing, robot) had
-  fills sitting on completely open lines with no enclosed area at all —
-  these were fully redrawn as proper closed shapes rather than patched.
-  20 fill actions that had literally no possible enclosed area (a fill
-  called on a bare 2-point line — glasses, cactus, meadow, and the
-  action-word figures like dancing/swimming/flying/etc.) were removed
-  outright rather than papered over, since there was nothing there for
-  them to usefully color anyway.
+- [What it does](#what-it-does)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [How the game works](#how-the-game-works)
+- [The bot (Play vs Computer)](#the-bot-play-vs-computer)
+- [Network protocol](#network-protocol)
+- [Theming, i18n & UI](#theming-i18n--ui)
+- [Running it locally](#running-it-locally)
+- [Deploying](#deploying)
+- [Adding a new drawable word](#adding-a-new-drawable-word)
+- [Known limitations](#known-limitations)
+- [Credits](#credits)
 
-## Phase 2.10: Three critical bot/canvas bugs fixed
+---
 
-- **Bot drawing was painfully slow, sometimes timing out**: `BotPeer`'s
-  `emit()` was tacking a 250-650ms randomized "network latency" delay
-  onto EVERY message — including every individual stroke segment of a
-  drawing. That delay stacked on top of the drawing's own pacing
-  (already spread across ~45s), so a detailed sketch could take 2-3x
-  longer than intended to finish, sometimes eating past the 70-second
-  round timer before it was even done. Fixed: stroke/fill messages now
-  get a small 15-40ms jitter instead; only one-off messages (chat,
-  hello, clues) keep the human-like delay.
-- **Bot went completely silent as guesser from round 2 onward**: when a
-  round ended, `showRoundResult()` was calling `advanceTurn()` (which
-  immediately fires off `word_length`/`hint_reveal`/`clue` messages for
-  whoever draws next) BEFORE sending the `next_turn` message that tells
-  `BotPeer` whose turn it actually is now. So every round after the
-  first, the bot received the new word's pattern/hints/clues while its
-  internal `botIsDrawer` flag still held the PREVIOUS round's value —
-  the guard checks silently dropped all of it, leaving the bot with no
-  information to guess from. Fixed by sending `next_turn` first, and
-  additionally hardened `BotPeer` to fully reset its guesser state on
-  every turn transition so no stale pattern/tried-guesses data can leak
-  into a new round even if a future change reintroduces a similar
-  ordering issue.
-- **Canvas going blank mid-round (both bot AND real-friend games)**:
-  `DrawCanvas.renderRemoteStroke()`/`renderRemoteFill()` — the functions
-  that paint a stroke arriving from the OTHER player — were only
-  painting directly onto the canvas, never recording it into
-  `strokeHistory`. Any time the canvas resized (a hint tile row
-  appearing, keyboard open/close, orientation changes — anything that
-  changes the draw area's layout), `resizeCanvas()` clears the canvas
-  and repaints strictly from `strokeHistory` — which, for the person
-  guessing, was always empty. Every resize wiped their screen back to
-  blank, discarding everything the other player had drawn so far. Now
-  every remote stroke/fill is recorded (consecutive same-gesture
-  segments are merged into one history entry, mirroring how the local
-  drawer's own pointer-drag becomes one entry, so `MAX_HISTORY` — raised
-  from 60 to 150 — isn't blown through by a single detailed sketch).
+## What it does
 
-## Phase 2.9: Play Again, separated Create/Join, and Play with Computer
+- **Play with a Friend** — one player creates a room (gets a 6-character
+  code / shareable link), the other joins. No sign-up, no server-side
+  matchmaking — the room code *is* the host's WebRTC peer ID.
+- **Play vs Computer** — a fully local, deterministic bot opponent that
+  both draws (replaying hand-authored stroke sequences) and guesses
+  (pattern/clue-based reasoning). Works instantly, no AI API required
+  for gameplay itself.
+- **Turns**: 8 rounds total (4 each), 70 seconds per round. One player
+  draws a secret word on a shared canvas, the other tries to guess it
+  in the chat box. Points are awarded for correct guesses with a speed
+  bonus, and a smaller consolation score to the drawer.
+- **Always-on voice chat** — the moment two real players connect, a
+  live peer-to-peer audio channel opens automatically (Discord-style,
+  no "start call" step), with independent mic/speaker mute toggles.
+- **Progressive hints** — letter-blank tiles slowly reveal a few
+  letters of the word as the timer runs down, plus rotating text clues
+  that never contain the word itself.
+- **Meme soundboard** — a radial FAB menu of voicelines (Nice!, Bruh,
+  Wow, Laugh, Airhorn) both players hear at once.
+- **Reconnect handling** — if a connection drops (network blip, tab
+  backgrounded, accidental back button), both sides try to
+  re-establish the link on the same room without restarting the game,
+  and the host resyncs round/score/timer state once reconnected.
+- **Hinglish-first UI** — a full `data-i18n` translation layer switches
+  the entire UI (menus, screens, in-game labels, legal pages) between
+  English and Hinglish, persisted across sessions.
+- **Light/Dark themes** — a distinct glassmorphism dark-navy theme and
+  a warm cream light theme, togglable from Settings and persisted.
+- **Zero backend for gameplay** — the only server-side code in this
+  repo is one optional serverless function for AI-flavored bot chat
+  banter (see below); everything else — drawing, guessing, voice,
+  scoring, reconnect — is peer-to-peer or fully client-side.
 
-- **Play Again (rematch)**: the game-over screen previously only had a
-  "Back to Home" button disguised with the old label, which tore down
-  the WebRTC connection and reloaded the page every single time a game
-  finished — losing the room and disconnecting from your friend even
-  if you both wanted to play again. Now there are two real buttons:
-  **Play Again** restarts the same session in place (same room / same
-  bot, scores reset, turn order flips) via a small `rematch_request` /
-  `rematch_accept` handshake so both clients restart in lockstep, and
-  **Back to Home** keeps the old full-reset behavior for when you
-  actually want to leave.
-- **Create Room and Join Room are separate now**: the home screen used
-  to stack both actions in one card with a plain "or" divider between
-  them. They're now two distinct sub-tabs under a "Play with Friend"
-  mode — picking one fully hides the other, so there's no ambiguity
-  about which button does what.
-- **Play with Computer**: a brand new top-level mode next to "Play
-  with Friend". No room code, no second device — starts instantly
-  against an offline, rule-based bot (`js/bot.js`) that plays BOTH
-  roles depending on whose turn it is:
-  - **As drawer**, it picks a word and paints a recognizable sketch
-    using a small library of hand-built shape templates for common
-    words, falling back to category-based generic sketches (animal,
-    food, "person doing an action", landscape, small object) for every
-    other word in `js/words.js`, so no word ever draws a blank canvas.
-  - **As guesser**, it reads the same word-length pattern, revealed
-    letters, and rotating clue text a human guesser would see, and
-    scores every remaining candidate word by pattern-fit + clue
-    keyword overlap to send a guess — with human-like randomized
-    timing so it doesn't feel like a reflex.
-  - Architecturally, `BotPeer` implements the exact same interface as
-    the real `Connection` module (`send`/`onMessage`/`onOpen`/...), so
-    every existing piece of turn/chat/hint/clue protocol handling in
-    `app.js` runs completely unchanged — it has no idea whether it's
-    talking to a friend over WebRTC or a local bot.
-  - No API key, no network calls — fully offline. A real AI-backed
-    brain (OpenRouter or similar) is a natural next step: it would only
-    need to replace `BotBrain.chooseGuess()` / `BotBrain.planDrawing()`
-    internals, the `BotPeer` wiring around it stays the same.
+## Tech stack
 
-## Phase 2.3: Rotating text clues + polished home screen + meme voicelines
+| Layer | Choice |
+|---|---|
+| UI | Vanilla HTML/CSS/JS — **no framework, no build step** |
+| Peer connection | [PeerJS](https://peerjs.com/) (`peerjs@1.5.4`, loaded via CDN) on top of WebRTC |
+| NAT traversal | Google public STUN + [Open Relay Project](https://www.metered.ca/tools/openrelay/) public TURN (free, no signup) |
+| Canvas | Native `<canvas>` 2D API, normalized (0–1) coordinates so drawings map correctly across different screen sizes |
+| Voice | WebRTC media stream via PeerJS's `call()` API — no separate signaling needed |
+| Bot brain | 100% local/deterministic — a hand-authored stroke library (`js/drawings.js`) + pattern/clue-matching guess logic (no AI call for actual gameplay) |
+| Optional AI | [OpenRouter](https://openrouter.ai/) free-tier model, called only from one serverless function, only for bot small-talk (never for guessing/drawing) |
+| Hosting | Static site + one serverless function — deploys cleanly to [Vercel](https://vercel.com) with zero config |
+| Persistence | `localStorage` only (theme, language preference) — no database anywhere |
 
-- **Rotating text clues**: every word in `js/words.js` now carries 2-3
-  hand-written hint sentences (never containing the word itself). The
-  drawer's client cycles through them every ~12 seconds and sends each
-  one to the guesser, who sees them fade in under the hint tiles.
-- **Home screen redesign**: the static red "Enter your name to
-  continue" warning is gone — tapping Create/Join with an empty name
-  now gives the field a quick shake instead. The name field also has
-  an animated typewriter placeholder ("Enter Nickname" → "e.g. Rahul"
-  → ...) that stops the instant you focus or type.
-- **Meme voiceline FAB**: a 🎤 button on the game screen opens a radial
-  pie menu with 5 voiceline buttons. Tapping one plays it on BOTH
-  players' screens (it's a shared reaction, not just for you).
-- **Sound effect hooks**: round-countdown tick (last 3 seconds),
-  turn-start chime, correct-guess ding, and win/lose jingles are all
-  wired to the right game moments. No audio files are bundled — see
-  `public/audio/README.md` for the exact filenames to drop in.
+No `npm install` is needed to run this app — `package.json` exists
+only to pin the Node engine (`>=18`) for the one serverless function.
+Everything under the site root is served as-is.
 
-## Phase 2.2: Easier guessing + easier drawing (hint system + undo/eraser)
-
-- **Progressive hint reveal**: the guesser sees blank tiles for the
-  word (`_ _ _ _ _`, with proper gaps for multi-word answers like
-  "ice cream"). The first and last letter of each word unlock
-  instantly, then one more random letter unlocks at 75%, 55%, 35%,
-  and 18% of the round timer — capped at ~45% of the word so it
-  never fully gives itself away.
-  - Security note: the guesser's client never receives the actual
-    word — only the letter/space pattern up front, then individual
-    `{index, letter}` reveals sent by the drawer's client as they
-    unlock. There's no way to inspect the page and read the word early.
-- **Eraser tool**: real canvas erasing (not just white paint) via
-  `destination-out` compositing, toggle on/off in the toolbar.
-- **Undo button**: removes the drawer's last full pen-stroke (not
-  just the last tiny segment) and stays in sync with the guesser's
-  screen.
-
-## Phase 2 (current): Full Game Loop
-
-What works now:
-- Room create/join (6-char code) — from Phase 1
-- Turn-based drawing: one player draws, the other watches live and guesses
-- Real-time stroke sync over WebRTC (drawing appears on both screens as it happens)
-- Secret word assigned from a fixed list (only the drawer sees it)
-- Open chat — both players can chat/guess, all messages visible to both
-- Automatic correct-guess detection (case-insensitive, trimmed match)
-- Scoring: guesser gets points (with a speed bonus), drawer gets points too
-- 70-second timer per turn, 8 total turns (4 each), alternating
-- Round-result screen between turns, final game-over screen with winner
-- Color picker, brush size, eraser, undo, clear canvas (drawer only)
-- Instagram-style chat: message bubbles, timestamps, sent/seen ticks, emoji picker
-- Canvas gets a fixed portion of the screen so the on-screen keyboard
-  opening (typing a guess) never resizes or clears the drawing
-
-## How to test locally
-
-No build step needed — it's plain HTML/CSS/JS.
-
-```bash
-cd sketch-duel
-python3 -m http.server 8080
-```
-
-Open `http://localhost:8080` in two different browser tabs (or two devices
-on the same wifi, using your computer's local IP instead of localhost) to
-simulate two players.
-
-1. Tab/Device A: enter a name → tap "Create Room" → note the 6-char code
-2. Tab/Device B: enter a name → enter that code → tap "Join Room"
-3. Once connected, the game starts automatically — host draws first
-4. Drawer: pick a color/size and draw; word is shown only to them
-5. Guesser: type guesses in the chat box — correct guess is auto-detected
-6. Turns alternate automatically until all 8 rounds are done
-
-## Phase 2.1: Home screen flow + sharing
-
-- Name is required before either Create Room or Join Room becomes tappable
-- Join Room button visually lights up (turns purple) the moment a valid
-  room code is typed, instead of being static
-- "Share Link" button on the waiting screen opens the native share sheet
-  (WhatsApp, Messages, etc.) with a direct join link — opening that link
-  auto-fills the room code on the other end
+## Architecture
 
 ```
-sketch-duel/
-├── index.html          — all screens (home, waiting, game, results)
-├── style.css            — mobile-first dark theme
-├── app.js                — wires UI + connection + canvas + game together,
-│                           defines the network message protocol
+┌──────────────┐        WebRTC DataChannel        ┌──────────────┐
+│   Player A    │ ◄──────────────────────────────► │   Player B    │
+│  (Host/Room)  │        + WebRTC Audio (voice)     │   (Guest)     │
+└──────┬───────┘                                    └──────┬───────┘
+       │  PeerJS signaling (public PeerJS cloud broker,     │
+       │  used only to establish the connection —           │
+       │  no game data ever passes through it)               │
+       └──────────────────────┬───────────────────────────┘
+                               │
+                    ┌──────────────────────┐
+                    │  Vercel (static host)  │
+                    │  api/bot-chat.js        │  ← optional, bot banter only
+                    │  (→ OpenRouter, if key   │
+                    │     is configured)       │
+                    └──────────────────────┘
+```
+
+There is **no game server**. `js/connection.js` opens a direct
+WebRTC connection between the two browsers using PeerJS purely for
+initial signaling (finding each other) — every stroke, chat message,
+guess, and score update after that travels client-to-client over the
+data channel, never through any backend.
+
+**"Play vs Computer" reuses the exact same protocol.** `js/bot.js`'s
+`BotPeer` object impersonates `Connection`'s public interface
+(`send`/`onMessage`/`onOpen`/`isConnected`/`destroy`, etc.), so
+`app.js` and every other module talk to the bot exactly the same way
+they'd talk to a real WebRTC peer. This means there's no
+`if (isBotGame)` branching scattered through the game logic — the bot
+is just a different implementation sitting behind the same interface.
+
+## Project structure
+
+```
+guessart/
+├── index.html               # All screens/markup: home, waiting room, game,
+│                             # round result, game over, menu + settings
+│                             # sub-panels, legal panels, inline SVG icon sprite
+├── app.js                    # Wires up UI ↔ Connection ↔ Canvas ↔ Game.
+│                             # Owns screen routing, the i18n engine, theme
+│                             # persistence, chat rendering, network message
+│                             # dispatch (see the protocol table at the top
+│                             # of this file), reconnect UI states
+├── style.css                  # All styling: CSS custom properties for
+│                             # theming, 100dvh/flexbox mobile-first layout,
+│                             # glassmorphism dark theme + light theme overrides
 ├── js/
-│   ├── connection.js     — WebRTC/PeerJS connection layer
-│   ├── canvas.js          — drawing engine, stroke history/undo, eraser, normalized-coordinate stroke sync
-│   ├── game.js             — turn management, timer, scoring, word logic
-│   ├── hints.js             — progressive hint reveal (drawer-authoritative, letters sent one at a time)
-│   ├── clues.js             — rotating text hints (drawer-authoritative, cycles every ~12s)
-│   ├── audio.js             — sound effects manager (voicelines + SFX, all placeholder file paths)
-│   └── words.js            — fixed word list + 2-3 clue sentences per word
-└── public/
-    ├── audio/              — drop your own .mp3s here — see audio/README.md for exact filenames
-    ├── images/
-    └── data/
+│   ├── connection.js          # PeerJS/WebRTC connection layer: host/guest
+│   │                          # roles, ICE server config, reconnect-with-backoff
+│   ├── canvas.js               # Drawing engine: stroke capture, flood fill
+│   │                          # (color-distance tolerance), undo, remote
+│   │                          # stroke/fill rendering, resize-safe redraw
+│   ├── game.js                 # Turn management, round timer, scoring, win logic
+│   ├── hints.js                 # Progressive letter-reveal schedule (drawer-
+│   │                          # authoritative, sent to guesser piece by piece)
+│   ├── clues.js                  # Rotating text-clue cycling for the guesser
+│   ├── words.js                  # The word list — 150+ entries, each with
+│   │                          # 2–3 hand-written non-giveaway clues
+│   ├── drawings.js               # Hand-authored stroke-by-stroke drawing
+│   │                          # library for the bot (140+ words), captured
+│   │                          # via a standalone tester tool (see below)
+│   ├── bot.js                    # BotBrain (drawing/guessing intelligence),
+│   │                          # BotChat (conversational banter routing),
+│   │                          # BotPeer (network-shaped stand-in for Connection)
+│   ├── audio.js                   # Sound effects + voiceline playback,
+│   │                          # autoplay-policy-safe unlock handling
+│   └── voicecall.js                # Always-on P2P voice: independent mic/
+│                              # speaker toggles, mic-permission-safe
+├── api/
+│   └── bot-chat.js                # Vercel serverless function: optional
+│                              # OpenRouter-backed bot small talk. Stubs
+│                              # cleanly to local canned replies until
+│                              # OPENROUTER_API_KEY is set — no code change
+│                              # needed later, it just starts working.
+├── public/
+│   ├── audio/                     # sfx + voiceline .mp3 files
+│   └── images/                    # logo, favicon, OG cover, donate QR
+├── package.json                    # Just pins Node >=18 for the serverless fn
+├── robots.txt / sitemap.xml         # Basic SEO
+└── googledecff8a97b3b7f45.html      # Google Search Console verification file
 ```
 
-## Deploying to Vercel
+## How the game works
 
-This is a fully static site — no environment variables, no server needed
-for Step 1.
+1. **Home screen** — pick "Play with Friend" (Create Room / Join Room)
+   or "Play vs Computer".
+2. **Room setup** — the host's PeerJS ID becomes the room code. The
+   guest connects directly to that ID.
+3. **Turn loop** (`js/game.js`, `TOTAL_ROUNDS = 8`, `ROUND_SECONDS = 70`):
+   - Whoever's turn it is gets a word (from `js/words.js`) and draws
+     it on the shared canvas (`js/canvas.js` streams strokes over the
+     data channel in near-real-time).
+   - The other player sees the word's letter/space pattern
+     (e.g. `LLL LLLLL`) with letters progressively revealed as the
+     timer counts down (`js/hints.js`), plus rotating text clues
+     (`js/clues.js`), and types guesses into chat.
+   - A correct guess ends the round early; the drawer confirms it, the
+     word is revealed to both, and points are split (bigger reward for
+     a fast correct guess, a smaller flat reward for the drawer).
+   - No correct guess before the timer hits 0 → round ends, word is
+     revealed, no points awarded.
+4. **Round result screen** → **next round**, alternating who draws,
+   until all 8 rounds are done.
+5. **Game over screen** shows the final score with **Play Again**
+   (restarts in the same room/bot session via a small handshake — no
+   reconnect needed) or **Back to Home**.
 
+Coordinates for every stroke are normalized to a 0–1 range before
+being sent, so a drawing looks correct regardless of each player's
+screen size or orientation.
+
+## The bot ("Play vs Computer")
+
+The bot is intentionally **not** an LLM wrapper for actual gameplay —
+drawing and guessing need to be instant and reliable, so both are
+100% local and deterministic:
+
+- **Drawing**: `js/drawings.js` is a hand-authored library of
+  140+ words, each stored as a literal sequence of canvas actions
+  (`gesture` = a stroke's point path, `fill` = a flood-fill at a
+  point) captured with a standalone browser tool (a "tester" utility,
+  not included in this repo) and pasted in as plain arrays. `BotBrain`
+  replays these stroke-by-stroke at a human-plausible pace. Words
+  without a hand-authored entry fall back to a smaller generic
+  template set, then finally a basic category sketch.
+- **Guessing**: `BotBrain.chooseGuess` works off the same information
+  a real player would have — the revealed letter pattern and the
+  clues sent so far — narrowing a candidate word list and occasionally
+  throwing in a plausible wrong guess before the real one, so it
+  doesn't feel telepathic.
+- **Chat personality**: separately, `BotChat` classifies any incoming
+  message as either a real guess attempt (handled above, untouched) or
+  just conversation ("bhai hara diya na", trash talk, banter). Only
+  conversational messages get a reply. Replies come from a local
+  canned Hinglish pool by default, or — if `OPENROUTER_API_KEY` is set
+  in the deployment's environment — from `api/bot-chat.js`, a tiny
+  serverless function that calls an OpenRouter model with a short
+  system prompt (stays in character, never reveals the secret word,
+  keeps replies to one short line). If that call fails, times out, or
+  no key is configured, it degrades silently back to the local pool —
+  the chat feature can never break, worst case it's just less witty.
+
+## Network protocol
+
+All messages are small JSON objects sent through `Connection.send()`
+(or the bot's `BotPeer.send()` shim). Full reference lives as a
+comment block at the top of `app.js`; summary:
+
+| Message type | Purpose |
+|---|---|
+| `hello` / `rename` | Exchange/update player names |
+| `start_turn` | Host tells guest whose turn it is |
+| `word_length` | Letter/space pattern for hint tiles (never the word itself) |
+| `hint_reveal` | One more letter unlocked |
+| `clue` | Rotating text hint |
+| `stroke` / `fill` / `clear` / `undo` | Canvas sync |
+| `chat` | Chat/guess message |
+| `correct_guess` / `timeout` | Round resolution |
+| `next_turn` | Advance to the next round |
+| `sync_state` | Host → guest catch-up payload sent right after a reconnect |
+| `voiceline` | Trigger a shared meme sound (played locally on both ends) |
+
+Voice itself isn't part of this JSON protocol — it's a separate,
+always-on WebRTC media call opened directly via PeerJS's `call()` API.
+
+## Theming, i18n & UI
+
+- **Themes**: CSS custom properties in `:root` define the dark
+  glassmorphism theme; `body[data-theme="light"]` overrides swap in a
+  warm cream palette. Toggled from Settings, persisted to
+  `localStorage`.
+- **i18n**: a generic engine in `app.js` — any element tagged
+  `data-i18n="key"` (plain text), `data-i18n-html="key"` (for strings
+  needing inline markup like `<strong>`), or
+  `data-i18n-placeholder="key"` gets swapped automatically against a
+  dictionary (`LANG_STRINGS.en` / `LANG_STRINGS.hi`). Adding a new
+  translated string anywhere is just adding the attribute + one
+  dictionary entry — no manual `querySelector` wiring needed. Covers
+  the home screen, waiting room, hamburger menu + all its sub-panels,
+  in-game static labels, and legal pages. Dynamically generated
+  runtime strings (chat messages, hint reveals, bot dialogue) are
+  translated at the point they're generated instead.
+- **Icons**: a single inline SVG `<symbol>` sprite sheet at the top of
+  `index.html`, referenced everywhere via `<use href="#icon-name">` —
+  no icon font, no external icon requests, and icons automatically
+  pick up `currentColor` so they match each button's state.
+- **Mobile-first layout**: `100dvh` + flexbox throughout (no JS-measured
+  viewport heights), so the on-screen keyboard, safe-area insets, and
+  orientation changes are all handled natively by the browser instead
+  of being manually tracked and re-synced in JavaScript.
+
+## Running it locally
+
+Since there's no build step, you have two options:
+
+**Option A — plain static server (gameplay only, no bot AI chat):**
 ```bash
-vercel deploy
+npx serve .
+# or
+python3 -m http.server 8000
+```
+Open the printed URL. Everything works except `api/bot-chat.js` (which
+needs Vercel's serverless runtime) — the bot chat feature just falls
+back to local canned replies, which is the default state anyway.
+
+**Option B — full local stack including the serverless function:**
+```bash
+npm i -g vercel
+vercel dev
+```
+This serves the static files *and* runs `api/bot-chat.js` locally the
+same way it runs in production.
+
+No `.env` file is required to play. To enable AI-flavored bot chat
+locally, create a `.env.local` with:
+```
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=nvidia/nemotron-3-super-120b-a12b:free   # optional override
 ```
 
-or just connect the GitHub repo to Vercel and it'll deploy on every push.
+## Deploying
 
-## Known limitation to watch for
+Deploys to [Vercel](https://vercel.com) with zero configuration —
+just connect the GitHub repo. Vercel auto-detects the static site plus
+the one function under `api/`.
 
-PeerJS's default connection uses STUN only (no TURN server). This works
-for most home wifi / mobile data connections, but can fail on strict
-corporate/campus networks or certain carrier NATs. If real-world testing
-shows connection failures, the fix is adding a free TURN server (e.g.
-Open Relay Project) to the PeerJS config in `app.js`.
+To turn on AI bot banter in production: **Vercel dashboard → Project →
+Settings → Environment Variables → add `OPENROUTER_API_KEY`** (get a
+free key at [openrouter.ai](https://openrouter.ai)) → redeploy. No
+frontend code changes needed — `api/bot-chat.js` picks it up
+automatically and stops returning stub replies.
 
-## Next steps (not built yet)
+## Adding a new drawable word
 
-- Phase 2: Canvas drawing + real-time stroke sync over the data channel
-- Phase 3: Game loop — word prompts, timer, reveal, scoring, round modifiers
-- Phase 4: In-game chat + emoji reactions
-- Phase 5: Meme voiceline triggers on game events
-- Phase 6: Voice chat (WebRTC media stream, reusing the same peer connection)
+1. Add an entry to `WORD_LIST` in `js/words.js`:
+   ```js
+   { word: "example", clues: ["Clue one.", "Clue two.", "Clue three."] }
+   ```
+   Clues should never contain the word itself.
+2. *(Optional but recommended)* give the bot a real hand-drawn sketch
+   for it instead of falling back to a generic shape — capture one
+   with the standalone tester tool and paste the resulting step array
+   into `js/drawings.js` as a new `word: [ ...steps ]` entry. Make sure
+   any `fill` action sits inside a genuinely closed outline (the flood
+   fill uses color-distance matching, not just exact pixels, but it
+   still needs a real closed boundary — an open gap will leak across
+   the whole canvas).
 
-## Phase 2.4: UI redesign — voice, topbar, settings, fill tool
+## Known limitations
 
-- **Voice is now always-on, no "Start Call" step.** The moment both
-  players connect, the app quietly asks for mic permission and opens a
-  background audio channel — no ringing, no accept/decline screen. If
-  the mic permission is denied, voice just silently stays unavailable
-  and the rest of the game still works.
-- **Mic and Speaker are two independent icon toggles** (🎤 / 🔊) in a
-  slim strip under the topbar — no more single confusing "mute" button.
-  - Mic off → your audio isn't sent, you still hear your friend
-  - Speaker off → you don't hear your friend, they still hear you
-  - Both live in the topbar AND inside Settings, kept in sync
-- **Topbar redesigned**: each player now gets a clearly bounded name
-  chip (you on the left, friend on the right) instead of a cramped
-  right-aligned "Name: score" string. Round/timer sit centered between
-  them, with a ⚙️ settings gear on the far right.
-- **New Settings panel** (gear icon): mic/speaker toggles, sound effects
-  toggle, meme voicelines toggle, rename yourself mid-game (announced
-  to your friend in chat), and a Leave Game button.
-- **Fill (bucket) tool** added to the drawing toolbar — tap it, tap a
-  color, then tap an enclosed region on the canvas to flood-fill it.
-  Fills are undo-able and sync to the other player like strokes do.
-- **Color scheme changed** from purple/pink to a teal/coral palette —
-  meant to feel more like a creative sketch tool and less like a
-  generic app template.
-- **Developer credit line restyled** — was oddly left-shifted and
-  wrapping awkwardly; now a small, centered, understated byline under
-  the logo instead of competing with the title for attention.
+- WebRTC connections behind very restrictive symmetric NATs or locked-
+  down corporate/campus firewalls can still occasionally fail even
+  with the TURN relay configured — there's no fallback beyond
+  STUN/TURN.
+- PeerJS's public cloud broker (used only for initial signaling) is a
+  free shared service — if it has an outage, new connections can't be
+  established, though already-connected games aren't affected.
+- The bot's hand-authored drawing library covers 140+ words; words
+  outside that set get a generic category sketch rather than a
+  purpose-drawn one.
+- No accounts, no persistent stats/leaderboards, no matchmaking beyond
+  direct room codes — by design, to keep this a zero-backend project.
 
-## Voice implementation notes
+## Credits
 
-Voice reuses the same PeerJS `peer` object the data channel already has
-open — no second signaling connection. Whoever is the **host** places
-the outgoing `peer.call()`; the guest only listens for the incoming
-call event. This avoids both sides dialing each other simultaneously.
+Built solo by **Shiva Saini** ([@shiva-sainiiii](https://github.com/shiva-sainiiii)) —
+entirely vanilla JS, no frameworks. Voice chat and P2P networking via
+[PeerJS](https://peerjs.com/); free TURN relay via
+[Open Relay Project](https://www.metered.ca/tools/openrelay/); optional
+bot banter via [OpenRouter](https://openrouter.ai/).
 
-## Phase 2.5: Icon system, favicon, and bug fixes
-
-### Visual
-- Replaced every UI-chrome emoji (mic, speaker, settings, fill, eraser,
-  undo, trash, send, close, smile, trophy) with a shared inline SVG icon
-  sprite sheet (`<symbol>` defs at the top of `index.html`, referenced
-  via `<use href="#icon-name">`). Icons pick up `currentColor`, so they
-  automatically match each button's active/inactive state.
-- Chat emoji picker and casual reactions were kept as real emoji on
-  purpose — those are meant to feel expressive/informal, unlike button
-  chrome which needed to look consistent and crisp at small sizes.
-- Added a favicon + apple-touch-icon (generated from the provided logo,
-  32×32 and 180×180) and a small logo image above the "GuessArt" title
-  on the home screen.
-- Brush-width buttons (previously ●⬤⚫ text glyphs) are now small solid
-  circles drawn in CSS, sized consistently regardless of device font.
-
-### Bugs fixed
-- **Fill/Eraser buttons appeared to do nothing.** Root cause: their
-  click handlers used `e.target` to toggle the `.active` class. Once
-  the buttons got SVG icons inside them, `e.target` became the inner
-  `<span>`/`<svg>` rather than the `<button>` itself, so the highlight
-  (and in some code paths, the mode) silently applied to the wrong
-  element. Fixed by using `e.currentTarget` everywhere in the toolbar.
-- **Flood fill could silently no-op** if it ran in the same frame as a
-  canvas resize (dimension mismatch between the CSS box and the canvas's
-  actual backing buffer). `floodFillRaw()` now checks the backing size
-  matches before reading/writing pixels, and the whole function is
-  wrapped in a try/catch so a transient failure never breaks the draw
-  loop.
-- **Voicelines played on the triggering side but not the other.** This
-  is a browser autoplay-policy quirk: a `.play()` call is only reliably
-  allowed on an audio element that's been "unlocked" by a direct user
-  gesture. The player who taps a voiceline unlocks it themselves; the
-  OTHER player receives the trigger over the data channel (not a user
-  gesture) and their browser could silently block it. Fixed by calling
-  `AudioFX.unlockAudioContext()` on the very first tap/touch anywhere in
-  the app, which primes every cached sound file before any remote
-  trigger can arrive.
-- **Canvas appeared to scroll off-screen when the keyboard opened.**
-  `body` had `display:flex` centering but no `position:fixed`, so when
-  the mobile keyboard tried to scroll a focused input into view, it
-  scrolled the whole page (canvas included) rather than just the chat
-  panel. `html, body` are now pinned with `position:fixed; overflow:hidden`,
-  so only content inside `.screen-game` (whose height is separately
-  locked via `--app-vh`) can respond to the keyboard at all.
-
-## Phase 2.6: Real fix for the keyboard/canvas bug, icon contrast, panel ratios
-
-### The actual root cause of the keyboard bug
-Every previous attempt patched symptoms (locking body scroll, locking
-`.screen-game`'s height from JS) but the real fix was one line in the
-viewport meta tag: `interactive-widget=overlays-content`. Without it,
-mobile browsers treat the on-screen keyboard as something that RESIZES
-the page's layout viewport — which is what kept dragging the header and
-canvas upward no matter how many heights we pinned in CSS, since
-`window.innerHeight` itself was shrinking. With `overlays-content` set,
-the keyboard now floats ON TOP of the page instead, and the layout
-viewport (and therefore every height derived from it) never changes
-when the keyboard opens or closes.
-
-With that in place:
-- `#app-viewport` stays completely still — header and canvas never move.
-- Only `.game-panel-bottom` (the chat section) reacts to the keyboard,
-  via a new `--keyboard-inset` CSS variable kept live by
-  `trackKeyboardOffset()` in app.js (reads `visualViewport`, which still
-  correctly reports keyboard height even though layout doesn't shrink).
-  That padding eats into the chat panel's own existing height budget —
-  the message log shrinks, the input row rises to sit just above the
-  keyboard, and neither the header nor the canvas panel are touched at
-  all, exactly as requested.
-- The voiceline FAB also rises with `--keyboard-inset` so it stays
-  pinned just above the input row instead of getting buried.
-
-### Panel ratios
-Rebalanced to give the canvas more room: header 15% / canvas 52% / chat
-33% (previously closer to an even 20/40/40 split). Topbar, voice strip,
-word banner, and hint tiles were all tightened up (smaller icons, less
-padding) so they still fit comfortably in the shorter header.
-
-### Icon contrast
-Found several icon buttons (topbar settings gear, voice strip mic/
-speaker) that never set an explicit `color`, so they fell back to the
-browser's default button text color instead of the app's `--text`
-variable — invisible against a dark background. All icon buttons now
-explicitly set `color`. Toolbar button borders were also bumped to a
-translucent white so the buttons themselves are visible against the
-similarly-dark card background, not just the icons inside them.
-
-### Fullscreen
-`requestAppFullscreen()` (hides the browser's URL bar on supporting
-mobile browsers) was already wired to fire from the Create/Join button
-taps — this satisfies the browser's user-gesture requirement for the
-Fullscreen API. iOS Safari doesn't implement the Fullscreen API at all,
-so this has no visible effect there (a platform limitation, not a bug) —
-Android Chrome and most other mobile browsers do support it.
-
-## Phase 2.7: Critical bug fix — home screen and game screen both visible at once
-
-Found the real cause of "everything renders on top of each other" —
-`.screen-game { display: flex; ... }` was setting `display` completely
-unconditionally, with no `.active` requirement. Since `#screen-game`
-carries both the `.screen` class (which says `display: none` by
-default) and the `.screen-game` class (single-class selector, same
-specificity, declared later in the file), `.screen-game` always won the
-cascade — meaning the game screen was NEVER actually hidden, even
-before a room was created or joined. It sat there the whole time,
-stacked underneath whichever screen currently had `.active`, and became
-visible the moment its own content had anything to show, independent of
-`showScreen()`.
-
-Fixed by moving `display: flex` into `.screen-game.active` specifically,
-matching every other screen's pattern. Also added a defense-in-depth
-rule — `.screen:not(.active) { display: none !important; }` — so any
-future rule that accidentally sets `display` on a screen without gating
-it behind `.active` gets overridden rather than silently causing the
-same class of bug again.
-
-## Phase 2.8: Header hides on keyboard open, chat rises above it
-
-- **Header now fully hides (not shrinks) when the keyboard opens.**
-  `.game-panel-top` collapses to `flex: 0 0 0%` with a fade-out, handing
-  its entire share of the screen to the canvas panel (`flex: 1 1 auto`).
-  Reverts instantly the moment the keyboard closes (`.keyboard-open`
-  class comes off `<body>`, driven by `--keyboard-inset` from
-  `trackKeyboardOffset()` in app.js).
-- **Canvas takes the freed space** and stays fully visible the whole time.
-- **Chat panel switches to a fixed 168px height** while the keyboard is
-  open (rather than its normal 34% share) — enough room for the input
-  row plus the last message or two, so you can see recent context and
-  what you're typing without it being just a bare input strip.
-- **The whole game screen gets keyboard-aware bottom padding**
-  (`padding-bottom: calc(8px + var(--keyboard-inset))` on `.screen-game`)
-  so the chat panel's bottom edge — and therefore the input row — ends
-  just above the keyboard instead of sliding underneath it, since the
-  keyboard overlays the page rather than resizing it.
+If you enjoy the game, the donate/UPI link in the in-app menu (Gift &
+Donate) is the best way to support future work on it.
