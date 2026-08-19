@@ -262,18 +262,31 @@ const LangManager = (function setupLang() {
       privacyPolicy: 'Privacy Policy',
 
       // About / SEO section
-      aboutHeading: 'The Free Online Drawing & Guessing Game You Play With Friends',
-      aboutLede: `GuessArt is a browser-based multiplayer drawing and guessing game — no download,
-            no account, no waiting room full of strangers. Create a private room, drop the
-            link in your group chat, and start drawing in seconds. It's the free
+      aboutHeading: 'Play Pictionary Against a Smart AI Bot — or With Friends, Free',
+      aboutLede: `GuessArt is a browser-based drawing and guessing game — no download, no account, no
+            waiting for a lobby to fill up. Play solo in <strong>Play with Computer</strong> mode
+            against a smart AI bot that takes turns drawing and guessing right back at you, or
+            create a private room and play with friends over live voice chat. It's the free
             <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
-            built for playing with the people you actually know.`,
+            that works whether or not anyone else is online.`,
       howToPlayHeading: 'How to Play GuessArt',
       step1: '<strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.',
       step2: '<strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.',
       step3: '<strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.',
       step4: '<strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.',
       step5: "<strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.",
+      vsBotHeading: 'Play Solo — No Friends Needed, No Lobby to Wait For',
+      vsBotBody: `Most Skribbl.io and Gartic.io alternatives only work if you can get a group together.
+            GuessArt's <strong>Play with Computer</strong> mode drops that requirement entirely —
+            it's a real 1v1 match against a built-in AI bot that draws its own pictures and
+            reads your chat to guess back, so a single player game of pictionary is always one
+            tap away.`,
+      vsBotFeature1Title: '🤖 Bot Draws Too',
+      vsBotFeature1Body: "The AI bot doesn't just guess — it takes its own turn sketching a word on the canvas for you to guess, stroke by stroke, just like a real opponent.",
+      vsBotFeature2Title: '💬 Reacts Like a Real Player',
+      vsBotFeature2Body: "The bot chats mid-round with casual banter and hints tied to what's actually on the canvas, instead of silently guessing in the background.",
+      vsBotFeature3Title: '⚡ Instant Start, Zero Lag',
+      vsBotFeature3Body: 'No server, no matchmaking queue — the bot runs right in your browser, so a solo round starts the moment you tap Play.',
       featuresHeading: 'Why Players Choose GuessArt',
       feature1Title: '🔒 Private Rooms',
       feature1Body: 'Every game runs in a private, code-protected room — play a real draw and guess game online with just your friend group, not random strangers.',
@@ -283,7 +296,7 @@ const LangManager = (function setupLang() {
       feature3Body: 'Drop meme voicelines and sound effects mid-round to roast bad drawings and celebrate great guesses.',
       feature4Title: '⚡ Instant & Free',
       feature4Body: 'No installs, no accounts, no paywalls. Open the link and play a free drawing puzzle with friends right in your browser.',
-      aboutFooter: "Looking for something to replace skribbl.io or gartic.io for game night? GuessArt keeps it simple: create a room, invite friends, and start drawing — free, private, and built for small friend groups.",
+      aboutFooter: "Looking for something to replace skribbl.io or gartic.io for game night — or just want to play pictionary alone right now? GuessArt keeps it simple: play instantly against the AI bot solo, or create a room and invite friends. Free, private, no download.",
 
       // Waiting room
       shareCodeLabel: 'Share this code with your friend',
@@ -383,18 +396,31 @@ const LangManager = (function setupLang() {
       privacyPolicy: 'Privacy Policy',
 
       // About / SEO section
-      aboutHeading: 'Free Online Drawing & Guessing Game Jo Tum Dosto Ke Saath Khelte Ho',
-      aboutLede: `GuessArt ek browser-based multiplayer drawing aur guessing game hai — koi download nahi,
-            koi account nahi, ajnabiyon se bhara waiting room bhi nahi. Ek private room banao, group
-            chat me link daalo, aur seconds me banana shuru karo. Ye free
-            <strong>skribbl.io ka alternative</strong> aur <strong>gartic.io ka alternative</strong> hai,
-            un logon ke saath khelne ke liye jinhe tum sach me jaante ho.`,
+      aboutHeading: 'Smart AI Bot Ke Against Pictionary Khelo — Ya Dosto Ke Saath, Free',
+      aboutLede: `GuessArt ek browser-based drawing aur guessing game hai — koi download nahi,
+            koi account nahi, lobby fill hone ka wait bhi nahi. <strong>Computer ke saath khelo</strong>
+            mode me akele khelo ek smart AI bot ke against jo baari-baari khud drawing bhi banata hai
+            aur guess bhi karta hai, ya ek private room banao aur dosto ke saath live voice chat pe
+            khelo. Ye free <strong>skribbl.io ka alternative</strong> aur <strong>gartic.io ka
+            alternative</strong> hai jo tab bhi kaam karta hai jab koi aur online na ho.`,
       howToPlayHeading: 'GuessArt Kaise Khelein',
       step1: '<strong>Room Banao.</strong> Naam chuno, "Create Room" dabao, aur turant 6-character room code paao.',
       step2: '<strong>Apne Dosto Ko Bulao.</strong> Room code ya link share karo — wo ek tap me join ho jaate hain, sign-up ki zaroorat nahi.',
       step3: '<strong>Baari-Baari Banao.</strong> Ek player canvas par secret word banata hai, baaki sab guess karne ki race karte hain.',
       step4: '<strong>Guess Karo &amp; Points Kamao.</strong> Chat me apne guess type karo — jitni jaldi guess karoge, utne zyada points milenge.',
       step5: '<strong>Live Trash Talk Karo.</strong> Voice chat on karo aur jab kisi ki drawing bekar ho jaaye toh meme soundboard voiceline chalao.',
+      vsBotHeading: 'Akele Khelo — Na Kisi Dost Ki Zaroorat, Na Lobby Ka Wait',
+      vsBotBody: `Zyadatar Skribbl.io aur Gartic.io alternatives sirf tab kaam karte hain jab tum group
+            jama kar sako. GuessArt ka <strong>Computer ke saath khelo</strong> mode is zaroorat ko
+            hata deta hai — ye ek real 1v1 match hai ek built-in AI bot ke against, jo khud apni
+            drawings banata hai aur tumhari chat padh ke guess bhi karta hai, isliye akele pictionary
+            khelna hamesha ek tap door hota hai.`,
+      vsBotFeature1Title: '🤖 Bot Khud Bhi Banata Hai',
+      vsBotFeature1Body: 'AI bot sirf guess hi nahi karta — apni baari me khud canvas par ek word sketch karta hai, stroke-by-stroke, bilkul ek real opponent ki tarah.',
+      vsBotFeature2Title: '💬 Real Player Jaisa React Karta Hai',
+      vsBotFeature2Body: 'Bot round ke beech me casual banter aur canvas pe jo actually ban raha hai usse related hints ke saath chat karta hai, chup-chap background me guess karne ki jagah.',
+      vsBotFeature3Title: '⚡ Turant Shuru, Zero Lag',
+      vsBotFeature3Body: 'Koi server nahi, koi matchmaking queue nahi — bot tumhare browser me hi chalta hai, isliye solo round tap karte hi shuru ho jaata hai.',
       featuresHeading: 'Players GuessArt Kyun Choose Karte Hain',
       feature1Title: '🔒 Private Rooms',
       feature1Body: 'Har game ek private, code-protected room me chalta hai — sirf apne dosto ke saath asli draw and guess game khelo, ajnabiyon ke saath nahi.',
@@ -404,7 +430,7 @@ const LangManager = (function setupLang() {
       feature3Body: 'Round ke beech me meme voicelines aur sound effects chalao, bekar drawings ko roast karo aur achhe guess celebrate karo.',
       feature4Title: '⚡ Turant & Free',
       feature4Body: 'Koi install nahi, koi account nahi, koi paywall nahi. Link kholo aur apne browser me hi dosto ke saath free drawing puzzle khelo.',
-      aboutFooter: 'Game night ke liye skribbl.io ya gartic.io ka replacement dhoondh rahe ho? GuessArt ise simple rakhta hai: room banao, dosto ko bulao, aur banana shuru karo — free, private, aur chhote dosto ke groups ke liye बनाया gaya.',
+      aboutFooter: 'Game night ke liye skribbl.io ya gartic.io ka replacement dhoondh rahe ho — ya bas abhi akele pictionary khelna chahte ho? GuessArt ise simple rakhta hai: AI bot ke against turant solo khelo, ya room banao aur dosto ko bulao. Free, private, koi download nahi.',
 
       // Waiting room
       shareCodeLabel: 'Ye code apne dost ke saath share karo',

@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
 <!-- ===== PRIMARY SEO ===== -->
-<title>GuessArt – Free Online Drawing & Guessing Game with Friends | Skribbl.io Alternative</title>
-<meta name="description" content="Play GuessArt free with friends — a multiplayer online drawing and guessing game with private rooms, live voice chat, and meme soundboards. No download, no sign-up. A fun skribbl.io & gartic.io alternative.">
-<meta name="keywords" content="online drawing game, drawing and guessing game, skribbl.io alternative, gartic.io alternative, multiplayer guessing game, draw and guess online, play drawing puzzle with friends, private room drawing game, free draw game with voice chat">
+<title>GuessArt – Drawing Game vs AI Bot or Friends, Free</title>
+<meta name="description" content="Play GuessArt free — draw & guess solo against a smart AI bot, or with friends in a private room with voice chat. No download, no lobby wait. A skribbl.io alternative.">
+<meta name="keywords" content="play pictionary against ai, single player drawing game, drawing game vs computer, ai guessing game, online drawing game, drawing and guessing game, skribbl.io alternative, gartic.io alternative, multiplayer guessing game, draw and guess online, play drawing puzzle with friends, private room drawing game, free draw game with voice chat">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="author" content="Shiva Saini">
 <link rel="canonical" href="https://guessart.vercel.app/">
@@ -16,19 +16,19 @@
 <!-- ===== OPEN GRAPH (Facebook, WhatsApp, Discord, LinkedIn) ===== -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GuessArt">
-<meta property="og:title" content="GuessArt – Draw, Guess & Roast Your Friends Online, Free">
-<meta property="og:description" content="Create a private room, invite friends, and play a free multiplayer drawing & guessing game with live voice chat and meme soundboards. A fun skribbl.io & gartic.io alternative — no download needed.">
+<meta property="og:title" content="GuessArt – Play Solo vs an AI Bot, or Draw & Guess With Friends, Free">
+<meta property="og:description" content="No friends online? Play solo against a smart AI bot. Or create a private room and play with friends over voice chat. Free skribbl.io & gartic.io alternative — no download.">
 <meta property="og:url" content="https://guessart.vercel.app/">
 <meta property="og:image" content="https://guessart.vercel.app/public/images/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="GuessArt — online drawing and guessing game with friends">
+<meta property="og:image:alt" content="GuessArt — online drawing and guessing game, play vs an AI bot or with friends">
 <meta property="og:locale" content="en_US">
 
 <!-- ===== TWITTER / X CARD ===== -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="GuessArt – Draw, Guess & Roast Your Friends Online, Free">
-<meta name="twitter:description" content="Free multiplayer drawing & guessing game with private rooms, voice chat, and meme soundboards. Play instantly in your browser.">
+<meta name="twitter:title" content="GuessArt – Play Solo vs an AI Bot, or Draw & Guess With Friends, Free">
+<meta name="twitter:description" content="Free drawing & guessing game. Play solo against a smart AI bot, or with friends in a private room with voice chat. Play instantly in your browser.">
 <meta name="twitter:image" content="https://guessart.vercel.app/public/images/og-cover.png">
 
 <!-- ===== THEME / PWA-ish polish (matches --bg color) ===== -->
@@ -45,11 +45,12 @@
   "@type": "VideoGame",
   "name": "GuessArt",
   "url": "https://guessart.vercel.app/",
-  "description": "GuessArt is a free multiplayer online drawing and guessing game. Create a private room, invite friends, and take turns drawing and guessing with live voice chat and meme soundboards.",
-  "genre": ["Party Game", "Drawing Game", "Multiplayer Online Game"],
+  "description": "GuessArt is a free browser-based drawing and guessing game. Play solo against a smart AI bot that both draws and guesses, or create a private room to play with friends with live voice chat and meme soundboards.",
+  "genre": ["Party Game", "Drawing Game", "Puzzle Game", "Single Player Game", "Multiplayer Online Game"],
   "gamePlatform": "Web Browser",
   "applicationCategory": "Game",
   "operatingSystem": "Any",
+  "playMode": ["SinglePlayer", "MultiPlayer", "CoOp"],
   "offers": {
     "@type": "Offer",
     "price": "0",
@@ -59,6 +60,45 @@
     "@type": "Person",
     "name": "Shiva Saini"
   }
+}
+</script>
+
+<!-- FAQPage schema — targets the "play pictionary alone / vs computer /
+     without friends" search intent directly, since that's the one
+     Skribbl/Gartic genuinely can't answer. Kept short and strictly
+     factual (matches what the About section on this page actually
+     says) rather than stuffed with keywords, since Google penalizes
+     FAQ schema that doesn't match visible on-page content. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I play GuessArt alone, without friends?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. GuessArt has a Play with Computer mode where you play 1v1 against a built-in AI bot — the bot takes turns drawing and guessing with you, so you don't need to wait for anyone else to join."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is GuessArt a free alternative to Skribbl.io or Gartic.io?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. GuessArt is a free, browser-based drawing and guessing game with no download or sign-up. Unlike most Skribbl.io or Gartic.io alternatives, it also offers a solo mode against an AI bot in addition to private multiplayer rooms with friends."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does GuessArt require an account or download?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. GuessArt runs entirely in your browser with no installation and no account required — just open the site and start playing."
+      }
+    }
+  ]
 }
 </script>
 </head>
@@ -301,7 +341,7 @@
     </button>
 
     <div class="brand">
-      <img src="public/images/logo.png" alt="GuessArt" class="brand-logo">
+      <img src="public/images/logo.png" alt="GuessArt — drawing and guessing game, play vs AI bot or friends" class="brand-logo">
       <h1>Guess<span>Art</span></h1>
       <p class="credit-line">by <span>Shiva Saini</span></p>
       <p class="tagline" data-i18n="tagline">draw. guess. roast your friend.</p>
@@ -375,13 +415,14 @@
       <div class="about-inner">
 
         <header class="about-header">
-          <h2 id="about-heading" data-i18n="aboutHeading">The Free Online Drawing &amp; Guessing Game You Play With Friends</h2>
+          <h2 id="about-heading" data-i18n="aboutHeading">Play Pictionary Against a Smart AI Bot — or With Friends, Free</h2>
           <p class="about-lede" data-i18n-html="aboutLede">
-            GuessArt is a browser-based multiplayer drawing and guessing game — no download,
-            no account, no waiting room full of strangers. Create a private room, drop the
-            link in your group chat, and start drawing in seconds. It's the free
+            GuessArt is a browser-based drawing and guessing game — no download, no account, no
+            waiting for a lobby to fill up. Play solo in <strong>Play with Computer</strong> mode
+            against a smart AI bot that takes turns drawing and guessing right back at you, or
+            create a private room and play with friends over live voice chat. It's the free
             <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
-            built for playing with the people you actually know.
+            that works whether or not anyone else is online.
           </p>
         </header>
 
@@ -394,6 +435,31 @@
             <li data-i18n-html="step4"><strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.</li>
             <li data-i18n-html="step5"><strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.</li>
           </ol>
+        </article>
+
+        <article class="about-block" aria-labelledby="vs-bot-heading">
+          <h3 id="vs-bot-heading" data-i18n="vsBotHeading">Play Solo — No Friends Needed, No Lobby to Wait For</h3>
+          <p class="about-lede" data-i18n-html="vsBotBody">
+            Most Skribbl.io and Gartic.io alternatives only work if you can get a group together.
+            GuessArt's <strong>Play with Computer</strong> mode drops that requirement entirely —
+            it's a real 1v1 match against a built-in AI bot that draws its own pictures and
+            reads your chat to guess back, so a single player game of pictionary is always one
+            tap away.
+          </p>
+          <div class="feature-grid">
+            <div class="feature-card">
+              <h4 data-i18n="vsBotFeature1Title">🤖 Bot Draws Too</h4>
+              <p data-i18n="vsBotFeature1Body">The AI bot doesn't just guess — it takes its own turn sketching a word on the canvas for you to guess, stroke by stroke, just like a real opponent.</p>
+            </div>
+            <div class="feature-card">
+              <h4 data-i18n="vsBotFeature2Title">💬 Reacts Like a Real Player</h4>
+              <p data-i18n="vsBotFeature2Body">The bot chats mid-round with casual banter and hints tied to what's actually on the canvas, instead of silently guessing in the background.</p>
+            </div>
+            <div class="feature-card">
+              <h4 data-i18n="vsBotFeature3Title">⚡ Instant Start, Zero Lag</h4>
+              <p data-i18n="vsBotFeature3Body">No server, no matchmaking queue — the bot runs right in your browser, so a solo round starts the moment you tap Play.</p>
+            </div>
+          </div>
         </article>
 
         <article class="about-block" aria-labelledby="features-heading">
@@ -420,9 +486,9 @@
 
         <footer class="about-footer">
           <p data-i18n="aboutFooter">
-            Looking for something to replace skribbl.io or gartic.io for game night?
-            GuessArt keeps it simple: create a room, invite friends, and start drawing —
-            free, private, and built for small friend groups.
+            Looking for something to replace skribbl.io or gartic.io for game night — or just want
+            to play pictionary alone right now? GuessArt keeps it simple: play instantly against
+            the AI bot solo, or create a room and invite friends. Free, private, no download.
           </p>
         </footer>
 
