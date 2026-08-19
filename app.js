@@ -269,13 +269,18 @@ const LangManager = (function setupLang() {
             create a private room and play with friends over live voice chat. It's the free
             <strong>skribbl.io alternative</strong> and <strong>gartic.io alternative</strong>
             that works whether or not anyone else is online.`,
-      howToPlayHeading: 'How to Play GuessArt',
-      step1: '<strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.',
-      step2: '<strong>Invite Your Friends.</strong> Share the room code or link — they join in one tap, no sign-up required.',
-      step3: '<strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while everyone else races to guess.',
-      step4: '<strong>Guess &amp; Score Points.</strong> Type your guesses in the chat — the faster you guess, the more points you score.',
-      step5: "<strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.",
-      vsBotHeading: 'Play Solo — No Friends Needed, No Lobby to Wait For',
+      howToPlayHeading: 'How to Play GuessArt vs the AI Bot',
+      step1: '<strong>Tap Play with Computer.</strong> Pick a name and start instantly — no room code, no waiting for anyone else.',
+      step2: '<strong>Take Turns With the Bot.</strong> One round you draw and the bot guesses, the next round the bot draws its own picture and you guess.',
+      step3: '<strong>Guess in Chat.</strong> Type your guess as soon as you know it — the bot reacts and chats back mid-round too.',
+      step4: '<strong>Score Points Solo.</strong> The faster you guess, the more points you earn — same scoring as playing with a friend.',
+      step5: '<strong>Play Another Round Instantly.</strong> No lobby to rejoin — start the next solo match with one tap whenever you want.',
+      howToPlayFriendHeading: 'How to Play GuessArt With a Friend',
+      friendStep1: '<strong>Create a Room.</strong> Pick a name, hit "Create Room," and get an instant 6-character room code.',
+      friendStep2: '<strong>Invite Your Friend.</strong> Share the room code or link — they join in one tap, no sign-up required.',
+      friendStep3: '<strong>Take Turns Drawing.</strong> One player draws a secret word on the canvas while the other races to guess.',
+      friendStep4: "<strong>Talk Trash Live.</strong> Flip on voice chat and blast a meme soundboard voiceline when someone's drawing goes sideways.",
+      vsBotHeading: 'Why Play Solo Against the Bot?',
       vsBotBody: `Most Skribbl.io and Gartic.io alternatives only work if you can get a group together.
             GuessArt's <strong>Play with Computer</strong> mode drops that requirement entirely —
             it's a real 1v1 match against a built-in AI bot that draws its own pictures and
@@ -403,13 +408,18 @@ const LangManager = (function setupLang() {
             aur guess bhi karta hai, ya ek private room banao aur dosto ke saath live voice chat pe
             khelo. Ye free <strong>skribbl.io ka alternative</strong> aur <strong>gartic.io ka
             alternative</strong> hai jo tab bhi kaam karta hai jab koi aur online na ho.`,
-      howToPlayHeading: 'GuessArt Kaise Khelein',
-      step1: '<strong>Room Banao.</strong> Naam chuno, "Create Room" dabao, aur turant 6-character room code paao.',
-      step2: '<strong>Apne Dosto Ko Bulao.</strong> Room code ya link share karo — wo ek tap me join ho jaate hain, sign-up ki zaroorat nahi.',
-      step3: '<strong>Baari-Baari Banao.</strong> Ek player canvas par secret word banata hai, baaki sab guess karne ki race karte hain.',
-      step4: '<strong>Guess Karo &amp; Points Kamao.</strong> Chat me apne guess type karo — jitni jaldi guess karoge, utne zyada points milenge.',
-      step5: '<strong>Live Trash Talk Karo.</strong> Voice chat on karo aur jab kisi ki drawing bekar ho jaaye toh meme soundboard voiceline chalao.',
-      vsBotHeading: 'Akele Khelo — Na Kisi Dost Ki Zaroorat, Na Lobby Ka Wait',
+      howToPlayHeading: 'GuessArt Ko AI Bot Ke Against Kaise Khelein',
+      step1: '<strong>Computer Ke Saath Khelo Tap Karo.</strong> Naam chuno aur turant shuru karo — koi room code nahi, kisi aur ka wait nahi.',
+      step2: '<strong>Bot Ke Saath Baari-Baari Khelo.</strong> Ek round tum banate ho aur bot guess karta hai, agle round bot khud apni drawing banata hai aur tum guess karte ho.',
+      step3: '<strong>Chat Me Guess Karo.</strong> Jaise hi pata chale, guess type kar do — bot bhi round ke beech react aur chat karta rehta hai.',
+      step4: '<strong>Akele Points Kamao.</strong> Jitni jaldi guess karoge, utne zyada points milenge — dost ke saath khelne wali hi scoring.',
+      step5: '<strong>Turant Ek Aur Round Khelo.</strong> Koi lobby dubara join nahi karni — jab chaho, ek tap me next solo match shuru karo.',
+      howToPlayFriendHeading: 'GuessArt Ko Dost Ke Saath Kaise Khelein',
+      friendStep1: '<strong>Room Banao.</strong> Naam chuno, "Create Room" dabao, aur turant 6-character room code paao.',
+      friendStep2: '<strong>Apne Dost Ko Bulao.</strong> Room code ya link share karo — wo ek tap me join ho jaate hain, sign-up ki zaroorat nahi.',
+      friendStep3: '<strong>Baari-Baari Banao.</strong> Ek player canvas par secret word banata hai, dusra guess karne ki race karta hai.',
+      friendStep4: '<strong>Live Trash Talk Karo.</strong> Voice chat on karo aur jab kisi ki drawing bekar ho jaaye toh meme soundboard voiceline chalao.',
+      vsBotHeading: 'Bot Ke Against Akele Kyun Khelein?',
       vsBotBody: `Zyadatar Skribbl.io aur Gartic.io alternatives sirf tab kaam karte hain jab tum group
             jama kar sako. GuessArt ka <strong>Computer ke saath khelo</strong> mode is zaroorat ko
             hata deta hai — ye ek real 1v1 match hai ek built-in AI bot ke against, jo khud apni
